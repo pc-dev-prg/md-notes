@@ -19,11 +19,9 @@
   .note-previewer {
     width: 100%;
     height: 100%;
-    background-color: #1a1a1a;
-    color: #f0f0f0;
-    border: 1px solid #8a2be2;
-    border-radius: 5px;
-    padding: 15px;
+    background: transparent;
+    color: #e0e0e0;
+    padding: 20px;
     overflow-y: auto;
   }
 
@@ -35,21 +33,20 @@
 
   :global(th),
   :global(td) {
-    border: 1px solid #8a2be2;
+    border: 1px solid rgba(255, 255, 255, 0.2);
     padding: 10px;
     text-align: left;
   }
 
   :global(th) {
-    background-color: #8a2be2;
-    color: white;
+    background-color: rgba(255, 255, 255, 0.1);
   }
 
   :global(blockquote) {
-    border-left: 5px solid #8a2be2;
+    border-left: 3px solid #00bfff;
     padding-left: 15px;
     margin-left: 0;
-    color: #ccc;
+    color: #a0a0a0;
     font-style: italic;
   }
 

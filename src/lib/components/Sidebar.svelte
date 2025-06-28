@@ -103,10 +103,7 @@
 </script>
 
 <aside class="sidebar">
-  <header>
-    <div class="logo">MD Notes</div>
-    <button on:click={handleLogout}>Logout</button>
-  </header>
+  <div class="logo">MD Notes</div>
   <div class="projects-header">
     <h2>Projects</h2>
     <button on:click={createNewProject}>+</button>
@@ -116,7 +113,10 @@
   {:else}
     <ul>
       {#each projects as project}
-        <li on:click={() => selectProject(project)}>
+        <li
+          class:selected={selectedProject && selectedProject.id === project.id}
+          on:click={() => selectProject(project)}
+        >
           <span>{project.name}</span>
           {#if selectedProject && selectedProject.id === project.id}
             <ul>
@@ -133,110 +133,95 @@
 
 <style lang="scss">
   .sidebar {
-    width: 250px;
-    background-color: #1a1a1a;
+    width: 280px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
     padding: 20px;
-    border-right: 1px solid rgba(138, 43, 226, 0.3);
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
-    min-height: 100vh;
-    box-sizing: border-box;
     display: flex;
     flex-direction: column;
+    gap: 20px;
 
-    header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-
-      .logo {
-        font-size: 1.2em;
-        font-weight: bold;
-        color: #00bfff;
-        text-shadow: 0 0 8px rgba(0, 191, 255, 0.5);
-      }
-
-      button {
-        background: linear-gradient(45deg, #00bfff, #8a2be2);
-        border: none;
-        padding: 5px 10px;
-        border-radius: 5px;
-        color: white;
-        font-size: 0.8em;
-        cursor: pointer;
-        transition: all 0.3s ease;
-
-        &:hover {
-          opacity: 0.9;
-          box-shadow: 0 0 10px rgba(0, 191, 255, 0.7);
-        }
-      }
+    .logo {
+      font-size: 1.8em;
+      font-weight: 700;
+      color: #fff;
+      text-align: center;
     }
 
     .projects-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 10px;
 
       h2 {
-        color: #8a2be2;
         font-size: 1.2em;
+        font-weight: 600;
+        color: #fff;
         margin: 0;
       }
 
       button {
-        background: none;
-        border: 1px solid #8a2be2;
-        color: #8a2be2;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        font-size: 1.2em;
-        line-height: 20px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #fff;
+        width: 30px;
+        height: 30px;
+        border-radius: 8px;
+        font-size: 1.5em;
+        line-height: 28px;
         cursor: pointer;
         transition: all 0.3s ease;
 
         &:hover {
-          background: #8a2be2;
-          color: white;
+          background: rgba(255, 255, 255, 0.2);
         }
       }
     }
 
     p {
-      color: #ccc;
-      font-size: 0.9em;
+      color: #a0a0a0;
+      text-align: center;
     }
 
     ul {
       list-style: none;
       padding: 0;
       margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
 
       li {
-        padding: 8px 0;
-        border-bottom: 1px solid rgba(138, 43, 226, 0.1);
-        color: #ddd;
-        font-size: 1em;
+        padding: 10px 15px;
+        border-radius: 8px;
+        color: #a0a0a0;
         cursor: pointer;
+        transition: all 0.3s ease;
 
-        &:last-child {
-          border-bottom: none;
+        &.selected {
+          background: rgba(0, 191, 255, 0.2);
+          color: #fff;
+        }
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.1);
         }
 
         span {
-          font-weight: bold;
-          color: #00bfff;
+          font-weight: 600;
         }
 
         ul {
           padding-left: 15px;
-          margin-top: 5px;
+          margin-top: 10px;
+          display: flex;
+          flex-direction: column;
+          gap: 5px;
 
           li {
             font-size: 0.9em;
-            padding: 5px 0;
+            padding: 8px 10px;
           }
         }
       }

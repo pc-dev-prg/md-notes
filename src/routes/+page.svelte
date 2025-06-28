@@ -106,6 +106,7 @@
 </script>
 
 <main>
+  <div class="background-shapes"></div>
   <header>
     <div class="logo">MD Notes</div>
     {#if session}
@@ -148,16 +149,51 @@
 <style lang="scss">
   :global(body) {
     margin: 0;
-    background-color: #0a0a0a;
-    color: #f0f0f0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #0d0d0d;
+    color: #e0e0e0;
+    font-family: 'Inter', sans-serif;
   }
 
   main {
+    position: relative;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
-    background: linear-gradient(135deg, #0a0a0a 0%, #1a0a2a 100%);
+    overflow: hidden;
+  }
+
+  .background-shapes {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+    background: #0d0d0d;
+
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
+    }
+
+    &::before {
+      width: 300px;
+      height: 300px;
+      background: rgba(0, 191, 255, 0.2);
+      top: -50px;
+      left: -50px;
+    }
+
+    &::after {
+      width: 400px;
+      height: 400px;
+      background: rgba(138, 43, 226, 0.2);
+      bottom: -100px;
+      right: -100px;
+    }
   }
 
   header {
@@ -165,29 +201,28 @@
     justify-content: space-between;
     align-items: center;
     padding: 20px 40px;
-    background-color: rgba(0, 0, 0, 0.5);
-    border-bottom: 1px solid rgba(138, 43, 226, 0.3);
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 
     .logo {
-      font-size: 1.8em;
-      font-weight: bold;
-      color: #00bfff;
-      text-shadow: 0 0 10px rgba(0, 191, 255, 0.5);
+      font-size: 1.5em;
+      font-weight: 700;
+      color: #fff;
     }
 
     button {
-      background: linear-gradient(45deg, #00bfff, #8a2be2);
-      border: none;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
       padding: 10px 20px;
-      border-radius: 5px;
+      border-radius: 8px;
       color: white;
       font-size: 1em;
       cursor: pointer;
       transition: all 0.3s ease;
 
       &:hover {
-        opacity: 0.9;
-        box-shadow: 0 0 15px rgba(0, 191, 255, 0.7);
+        background: rgba(255, 255, 255, 0.2);
       }
 
       &:disabled {
@@ -207,65 +242,70 @@
     padding: 20px;
 
     h1 {
-      font-size: 3.5em;
-      color: #00bfff;
-      margin-bottom: 15px;
-      text-shadow: 0 0 20px rgba(0, 191, 255, 0.6);
+      font-size: 4em;
+      font-weight: 800;
+      color: #fff;
+      margin-bottom: 20px;
     }
 
     p {
-      font-size: 1.5em;
-      color: #ccc;
+      font-size: 1.2em;
+      color: #a0a0a0;
       margin-bottom: 40px;
     }
 
     .auth-card {
-      background-color: rgba(25, 25, 25, 0.8);
-      padding: 30px;
-      border-radius: 10px;
-      box-shadow: 0 0 30px rgba(138, 43, 226, 0.4);
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(10px);
+      padding: 40px;
+      border-radius: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.1);
       width: 100%;
       max-width: 400px;
 
       h2 {
-        color: #8a2be2;
-        margin-bottom: 25px;
-        font-size: 1.8em;
+        color: #fff;
+        margin-bottom: 30px;
+        font-size: 1.5em;
+        font-weight: 600;
       }
 
       form {
         display: flex;
         flex-direction: column;
-        gap: 15px;
+        gap: 20px;
 
         input {
-          padding: 12px;
-          border: 1px solid #8a2be2;
-          border-radius: 5px;
-          background-color: #1a1a1a;
-          color: #f0f0f0;
+          padding: 15px;
+          border: 1px solid rgba(255, 255, 255, 0.2);
+          border-radius: 8px;
+          background: rgba(255, 255, 255, 0.1);
+          color: #fff;
           font-size: 1em;
+
+          &::placeholder {
+            color: #a0a0a0;
+          }
 
           &:focus {
             outline: none;
             border-color: #00bfff;
-            box-shadow: 0 0 8px rgba(0, 191, 255, 0.5);
           }
         }
 
         button {
-          background: linear-gradient(45deg, #00bfff, #8a2be2);
+          background: #00bfff;
           border: none;
-          padding: 12px;
-          border-radius: 5px;
+          padding: 15px;
+          border-radius: 8px;
           color: white;
           font-size: 1.1em;
+          font-weight: 600;
           cursor: pointer;
           transition: all 0.3s ease;
 
           &:hover {
-            opacity: 0.9;
-            box-shadow: 0 0 15px rgba(0, 191, 255, 0.7);
+            background: #00a0cc;
           }
 
           &:disabled {
@@ -289,31 +329,16 @@
 
   .guest-login {
     margin-top: 20px;
-  }
 
-  .auth-card {
-    h2 {
-      color: #40b4ff;
-    }
+    button {
+      background: none;
+      border: none;
+      color: #a0a0a0;
+      cursor: pointer;
+      font-size: 0.9em;
 
-    form {
-      input {
-        border-color: #40b4ff;
-        background-color: #1a1a1a;
-        color: #f0f0f0;
-
-        &:focus {
-          border-color: #8a2be2;
-          box-shadow: 0 0 8px rgba(138, 43, 226, 0.5);
-        }
-      }
-
-      button[type="submit"] {
-        background: linear-gradient(45deg, #40b4ff, #8a2be2);
-
-        &:hover {
-          box-shadow: 0 0 15px rgba(138, 43, 226, 0.7);
-        }
+      &:hover {
+        color: #fff;
       }
     }
   }

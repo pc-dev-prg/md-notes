@@ -160,25 +160,26 @@
 </script>
 
 <main>
-  <header>
-    <div class="logo">MD Notes</div>
-    <div>
-      <span class="save-status">{saveStatus}</span>
-      {#if selectedProject}
-        <button on:click={createNewNote}>New Note</button>
-      {/if}
-      {#if session}
-        <button on:click={handleLogout}>Logout</button>
-      {/if}
-    </div>
-  </header>
-
+  <div class="background-shapes"></div>
   <Sidebar on:selectNote={handleSelectNote} {isGuest} />
 
   <section class="main-content">
-    {#if selectedNote}
-      <h2>{selectedNote.title}</h2>
-    {/if}
+    <header>
+      <div class="header-left">
+        {#if selectedNote}
+          <h2>{selectedNote.title}</h2>
+        {/if}
+      </div>
+      <div class="header-right">
+        <span class="save-status">{saveStatus}</span>
+        {#if selectedProject}
+          <button on:click={createNewNote}>New Note</button>
+        {/if}
+        {#if session}
+          <button on:click={handleLogout}>Logout</button>
+        {/if}
+      </div>
+    </header>
     <div class="editor-container">
       <NoteEditor bind:content={noteContent} />
     </div>
@@ -191,98 +192,111 @@
 <style lang="scss">
   :global(body) {
     margin: 0;
-    background-color: #0a0a0a;
-    color: #f0f0f0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #0d0d0d;
+    color: #e0e0e0;
+    font-family: 'Inter', sans-serif;
   }
 
   main {
+    position: relative;
     display: flex;
     min-height: 100vh;
-    background: linear-gradient(135deg, #0a0a0a 0%, #1a0a2a 100%);
+    overflow: hidden;
   }
 
-  header {
-    position: fixed;
+  .background-shapes {
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 15px 30px;
-    background-color: rgba(0, 0, 0, 0.7);
-    border-bottom: 1px solid rgba(138, 43, 226, 0.3);
-    z-index: 1000;
+    height: 100%;
+    z-index: -1;
+    background: #0d0d0d;
 
-    .logo {
-      font-size: 1.5em;
-      font-weight: bold;
-      color: #00bfff;
-      text-shadow: 0 0 8px rgba(0, 191, 255, 0.5);
+    &::before,
+    &::after {
+      content: '';
+      position: absolute;
+      border-radius: 50%;
+      filter: blur(100px);
     }
 
-    .save-status {
-      margin-right: 20px;
-      font-style: italic;
-      color: #ccc;
+    &::before {
+      width: 300px;
+      height: 300px;
+      background: rgba(0, 191, 255, 0.2);
+      top: -50px;
+      left: 20%;
     }
 
-    button {
-      background: linear-gradient(45deg, #00bfff, #8a2be2);
-      border: none;
-      padding: 8px 15px;
-      border-radius: 5px;
-      color: white;
-      font-size: 0.9em;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      margin-left: 10px;
-
-      &:hover {
-        opacity: 0.9;
-        box-shadow: 0 0 10px rgba(0, 191, 255, 0.7);
-      }
-    }
-  }
-
-  .sidebar {
-    width: 250px;
-    background-color: #1a1a1a;
-    padding: 80px 20px 20px 20px; /* Adjust padding to account for fixed header */
-    border-right: 1px solid rgba(138, 43, 226, 0.3);
-    box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
-    min-height: 100vh;
-    box-sizing: border-box;
-
-    h2 {
-      color: #8a2be2;
-      margin-bottom: 20px;
-      font-size: 1.4em;
-    }
-
-    p {
-      color: #ccc;
-      font-size: 0.9em;
+    &::after {
+      width: 400px;
+      height: 400px;
+      background: rgba(138, 43, 226, 0.2);
+      bottom: -100px;
+      right: 20%;
     }
   }
 
   .main-content {
     flex-grow: 1;
-    padding: 80px 40px 20px 40px; /* Adjust padding to account for fixed header */
-    box-sizing: border-box;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+  }
 
-    h2 {
-      grid-column: 1 / -1;
-      color: #00bfff;
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    margin-bottom: 20px;
+
+    .header-left h2 {
+      font-size: 1.5em;
+      font-weight: 600;
+      color: #fff;
+      margin: 0;
     }
 
-    .editor-container,
-    .preview-container {
-      height: calc(100vh - 160px);
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 20px;
     }
+
+    .save-status {
+      font-style: italic;
+      color: #a0a0a0;
+    }
+
+    button {
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 8px 15px;
+      border-radius: 8px;
+      color: white;
+      font-size: 0.9em;
+      cursor: pointer;
+      transition: all 0.3s ease;
+
+      &:hover {
+        background: rgba(255, 255, 255, 0.2);
+      }
+    }
+  }
+
+  .editor-container,
+  .preview-container {
+    flex-grow: 1;
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    height: calc(100vh - 120px);
   }
 </style>
