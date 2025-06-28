@@ -22,6 +22,20 @@
   });
 
   export let isGuest = false;
+  let searchTerm = '';
+
+  $: filteredProjects = projects.filter((project) => {
+    const term = searchTerm.toLowerCase();
+    const hasMatchingNote = project.notes.some((note) =>
+      note.title.toLowerCase().includes(term)
+    );
+    const hasMatchingFolder = project.folders.some((folder) =>
+      folder.name.toLowerCase().includes(term)
+    );
+    return (
+      project.name.toLowerCase().includes(term) || hasMatchingNote || hasMatchingFolder
+    );
+  });
 
   onMount(async () => {
     if (isGuest) {
@@ -146,15 +160,18 @@
 
 <aside class="sidebar">
   <div class="logo">MD Notes</div>
+  <div class="search-bar">
+    <input type="text" placeholder="Search..." bind:value={searchTerm} />
+  </div>
   <div class="projects-header">
     <h2>Projects</h2>
     <button on:click={createNewProject}>+</button>
   </div>
-  {#if projects.length === 0}
+  {#if filteredProjects.length === 0}
     <p>No projects yet. Create one!</p>
   {:else}
     <ul>
-      {#each projects as project}
+      {#each filteredProjects as project}
         <li
           class:selected={selectedProject && selectedProject.id === project.id}
           on:click={() => selectProject(project)}
@@ -206,6 +223,25 @@
       font-weight: 700;
       color: #fff;
       text-align: center;
+    }
+
+    .search-bar input {
+      width: 100%;
+      padding: 10px 15px;
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+      font-size: 1em;
+
+      &::placeholder {
+        color: #a0a0a0;
+      }
+
+      &:focus {
+        outline: none;
+        border-color: #00bfff;
+      }
     }
 
     .projects-header,
