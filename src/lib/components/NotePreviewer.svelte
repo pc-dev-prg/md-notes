@@ -3,6 +3,11 @@
 
   export let content = '';
 
+  marked.setOptions({
+    gfm: true,
+    breaks: true,
+  });
+
   $: renderedContent = marked(content);
 </script>
 
@@ -20,5 +25,23 @@
     border-radius: 5px;
     padding: 15px;
     overflow-y: auto;
+  }
+
+  :global(table) {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+  }
+
+  :global(th),
+  :global(td) {
+    border: 1px solid #8a2be2;
+    padding: 10px;
+    text-align: left;
+  }
+
+  :global(th) {
+    background-color: #8a2be2;
+    color: white;
   }
 </style>
