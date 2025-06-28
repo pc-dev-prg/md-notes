@@ -231,6 +231,19 @@
   const toggleTheme = () => {
     themeStore.update((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'));
   };
+
+  const importNote = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const content = e.target.result;
+      const title = file.name.replace(/\.md$/, '');
+      dispatch('importNote', { title, content });
+    };
+    reader.readAsText(file);
+  };
 </script>
 
 <aside class="sidebar">
@@ -297,6 +310,10 @@
     <h2>Projects</h2>
     <button on:click={createNewProject}>+</button>
   </div>
+  <div class="import-section">
+    <label for="import-note">Import Note</label>
+    <input id="import-note" type="file" accept=".md" on:change={importNote} />
+  </div>
   {#if filteredProjects.length === 0}
     <p>No projects yet. Create one!</p>
   {:else}
@@ -353,11 +370,16 @@
       align-items: center;
       gap: 15px;
 
+      .avatar-link {
+        display: flex;
+      }
+
       .avatar {
         width: 40px;
         height: 40px;
         border-radius: 50%;
         object-fit: cover;
+        color: var(--text-color);
       }
 
       .logo {
@@ -476,6 +498,28 @@
       }
     }
 
+    .import-section {
+      label {
+        display: block;
+        width: 100%;
+        padding: 10px 15px;
+        border-radius: 8px;
+        background: var(--button-bg);
+        color: var(--text-color);
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: var(--button-hover-bg);
+        }
+      }
+
+      input[type='file'] {
+        display: none;
+      }
+    }
+
     p {
       color: var(--placeholder-color);
       text-align: center;
@@ -525,3 +569,4 @@
     }
   }
 </style>
+

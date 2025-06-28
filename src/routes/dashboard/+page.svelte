@@ -6,6 +6,7 @@
   import NoteEditor from '$lib/components/NoteEditor.svelte';
   import NotePreviewer from '$lib/components/NotePreviewer.svelte';
   import { sessionStore, projectsStore, selectedProjectStore, themeStore } from '$lib/store';
+  import { saveAs } from 'file-saver';
 
   let session;
   sessionStore.subscribe((value) => {
@@ -283,6 +284,12 @@
     }
   };
 
+  const exportNote = () => {
+    if (!selectedNote) return;
+    const blob = new Blob([noteContent], { type: 'text/markdown;charset=utf-8' });
+    saveAs(blob, `${selectedNote.title}.md`);
+  };
+
   $: if (noteContent && selectedNote) {
     debouncedSave();
   }
@@ -319,6 +326,7 @@
       <div class="header-right">
         <span class="save-status">{saveStatus}</span>
         {#if selectedNote}
+          <button on:click={exportNote}>Export</button>
           <div class="public-toggle">
             <span>Share Publicly</span>
             <label class="switch">
