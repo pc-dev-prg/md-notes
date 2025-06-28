@@ -264,6 +264,7 @@
       background: rgba(255, 255, 255, 0.1);
       color: #fff;
       font-size: 1em;
+      box-sizing: border-box;
 
       &::placeholder {
         color: #a0a0a0;
