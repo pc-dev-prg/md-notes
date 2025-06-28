@@ -3,6 +3,7 @@
   import { onMount, createEventDispatcher } from 'svelte';
   import { goto } from '$app/navigation';
   import { sessionStore, projectsStore, selectedProjectStore } from '$lib/store';
+  import { dndzone } from 'svelte-dnd-action';
 
   const dispatch = createEventDispatcher();
 
@@ -156,6 +157,36 @@
   function selectProject(project) {
     selectedProjectStore.set(project);
   }
+
+  const handleDnd = (e, list) => {
+    const { items, source, trigger } = e.detail;
+    list = items;
+
+    if (trigger === 'dropped') {
+      const updates = list.map((item, index) => {
+        return {
+          id: item.id,
+          order: index,
+        };
+      });
+
+      if (isGuest) {
+        projectsStore.update((currentProjects) => {
+          const projectIndex = currentProjects.findIndex((p) => p.id === selectedProject.id);
+          if (list[0].folder_id) {
+            currentProjects[projectIndex].notes = list;
+          } else {
+            currentProjects[projectIndex].folders = list;
+          }
+          return currentProjects;
+        });
+        localStorage.setItem('guest-projects', JSON.stringify(projects));
+      } else {
+        const tableName = list[0].folder_id ? 'notes' : 'folders';
+        supabase.from(tableName).upsert(updates).then();
+      }
+    }
+  };
 </script>
 
 <aside class="sidebar">
@@ -170,8 +201,8 @@
   {#if filteredProjects.length === 0}
     <p>No projects yet. Create one!</p>
   {:else}
-    <ul>
-      {#each filteredProjects as project}
+    <ul use:dndzone={{ items: filteredProjects }} on:consider={(e) => handleDnd(e, filteredProjects)} on:finalize={(e) => handleDnd(e, filteredProjects)}>
+      {#each filteredProjects as project (project.id)}
         <li
           class:selected={selectedProject && selectedProject.id === project.id}
           on:click={() => selectProject(project)}
@@ -182,12 +213,12 @@
               <h3>Folders</h3>
               <button on:click|stopPropagation={createNewFolder}>+</button>
             </div>
-            <ul>
-              {#each project.folders as folder}
+            <ul use:dndzone={{ items: project.folders }} on:consider={(e) => handleDnd(e, project.folders)} on:finalize={(e) => handleDnd(e, project.folders)}>
+              {#each project.folders as folder (folder.id)}
                 <li>
                   <span>{folder.name}</span>
-                  <ul>
-                    {#each project.notes.filter((n) => n.folder_id === folder.id) as note}
+                  <ul use:dndzone={{ items: project.notes.filter((n) => n.folder_id === folder.id) }} on:consider={(e) => handleDnd(e, project.notes)} on:finalize={(e) => handleDnd(e, project.notes)}>
+                    {#each project.notes.filter((n) => n.folder_id === folder.id) as note (note.id)}
                       <li on:click|stopPropagation={() => selectNote(note)}>{note.title}</li>
                     {/each}
                   </ul>
@@ -195,8 +226,8 @@
               {/each}
             </ul>
             <h3>Notes</h3>
-            <ul>
-              {#each project.notes.filter((n) => !n.folder_id) as note}
+            <ul use:dndzone={{ items: project.notes.filter((n) => !n.folder_id) }} on:consider={(e) => handleDnd(e, project.notes)} on:finalize={(e) => handleDnd(e, project.notes)}>
+              {#each project.notes.filter((n) => !n.folder_id) as note (note.id)}
                 <li on:click|stopPropagation={() => selectNote(note)}>{note.title}</li>
               {/each}
             </ul>

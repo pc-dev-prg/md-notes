@@ -28,6 +28,7 @@
 	},
 	"dependencies": {
 		"@supabase/supabase-js": "^2.50.0",
-		"marked": "^16.0.0"
+		"marked": "^16.0.0",
+		"svelte-dnd-action": "^0.9.63"
 	}
 }
