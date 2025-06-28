@@ -5,7 +5,7 @@
   import Sidebar from '$lib/components/Sidebar.svelte';
   import NoteEditor from '$lib/components/NoteEditor.svelte';
   import NotePreviewer from '$lib/components/NotePreviewer.svelte';
-  import { sessionStore, projectsStore, selectedProjectStore } from '$lib/store';
+  import { sessionStore, projectsStore, selectedProjectStore, themeStore } from '$lib/store';
 
   let session;
   sessionStore.subscribe((value) => {
@@ -15,6 +15,11 @@
   let selectedProject;
   selectedProjectStore.subscribe((value) => {
     selectedProject = value;
+  });
+
+  let theme;
+  themeStore.subscribe((value) => {
+    theme = value;
   });
 
   let noteContent = '# Hello, Markdown!';
@@ -196,7 +201,7 @@
   }
 </script>
 
-<main class:sidebar-closed={!sidebarOpen}>
+<main class:sidebar-closed={!sidebarOpen} class={theme}>
   <div class="background-shapes"></div>
   <Sidebar on:selectNote={handleSelectNote} {isGuest} />
 
@@ -247,10 +252,37 @@
 </main>
 
 <style lang="scss">
+  :root {
+    --bg-color: #0d0d0d;
+    --text-color: #e0e0e0;
+    --sidebar-bg: rgba(255, 255, 255, 0.05);
+    --border-color: rgba(255, 255, 255, 0.1);
+    --button-bg: rgba(255, 255, 255, 0.1);
+    --button-hover-bg: rgba(255, 255, 255, 0.2);
+    --input-bg: rgba(255, 255, 255, 0.1);
+    --placeholder-color: #a0a0a0;
+    --selected-bg: rgba(0, 191, 255, 0.2);
+    --hover-bg: rgba(255, 255, 255, 0.1);
+    --accent-color: #00bfff;
+  }
+
+  .light {
+    --bg-color: #f5f5f5;
+    --text-color: #333;
+    --sidebar-bg: rgba(0, 0, 0, 0.05);
+    --border-color: rgba(0, 0, 0, 0.1);
+    --button-bg: rgba(0, 0, 0, 0.1);
+    --button-hover-bg: rgba(0, 0, 0, 0.2);
+    --input-bg: rgba(0, 0, 0, 0.1);
+    --placeholder-color: #666;
+    --selected-bg: rgba(0, 191, 255, 0.2);
+    --hover-bg: rgba(0, 0, 0, 0.1);
+  }
+
   :global(body) {
     margin: 0;
-    background-color: #0d0d0d;
-    color: #e0e0e0;
+    background-color: var(--bg-color);
+    color: var(--text-color);
     font-family: 'Inter', sans-serif;
   }
 
@@ -268,7 +300,7 @@
     width: 100%;
     height: 100%;
     z-index: -1;
-    background: #0d0d0d;
+    background: var(--bg-color);
 
     &::before,
     &::after {
@@ -311,9 +343,9 @@
     justify-content: space-between;
     align-items: center;
     padding: 15px 20px;
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--sidebar-bg);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
 
     .header-left {
@@ -326,14 +358,14 @@
       display: none;
       background: none;
       border: none;
-      color: #fff;
+      color: var(--text-color);
       cursor: pointer;
     }
 
     .header-left h2 {
       font-size: 1.5em;
       font-weight: 600;
-      color: #fff;
+      color: var(--text-color);
       margin: 0;
     }
 
@@ -345,21 +377,21 @@
 
     .save-status {
       font-style: italic;
-      color: #a0a0a0;
+      color: var(--placeholder-color);
     }
 
     button {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
+      background: var(--button-bg);
+      border: 1px solid var(--border-color);
       padding: 8px 15px;
       border-radius: 8px;
-      color: white;
+      color: var(--text-color);
       font-size: 0.9em;
       cursor: pointer;
       transition: all 0.3s ease;
 
       &:hover {
-        background: rgba(255, 255, 255, 0.2);
+        background: var(--button-hover-bg);
       }
     }
 
@@ -375,9 +407,9 @@
 
   .editor-container,
   .preview-container {
-    background: rgba(255, 255, 255, 0.05);
+    background: var(--sidebar-bg);
     backdrop-filter: blur(10px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    border: 1px solid var(--border-color);
     border-radius: 12px;
     height: 100%;
   }
