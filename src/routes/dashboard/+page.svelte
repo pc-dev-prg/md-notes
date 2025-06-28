@@ -240,12 +240,15 @@
 
   .main-content {
     flex-grow: 1;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
     padding: 20px;
   }
 
   header {
+    grid-column: 1 / -1;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -254,7 +257,6 @@
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
-    margin-bottom: 20px;
 
     .header-left h2 {
       font-size: 1.5em;
@@ -292,11 +294,10 @@
 
   .editor-container,
   .preview-container {
-    flex-grow: 1;
     background: rgba(255, 255, 255, 0.05);
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
-    height: calc(100vh - 120px);
+    height: 100%;
   }
 </style>
