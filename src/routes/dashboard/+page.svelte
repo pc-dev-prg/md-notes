@@ -5,16 +5,20 @@
   import Sidebar from '$lib/components/Sidebar.svelte';
   import NoteEditor from '$lib/components/NoteEditor.svelte';
   import NotePreviewer from '$lib/components/NotePreviewer.svelte';
-  import { sessionStore } from '$lib/store';
+  import { sessionStore, projectsStore, selectedProjectStore } from '$lib/store';
 
   let session;
   sessionStore.subscribe((value) => {
     session = value;
   });
 
+  let selectedProject;
+  selectedProjectStore.subscribe((value) => {
+    selectedProject = value;
+  });
+
   let noteContent = '# Hello, Markdown!';
   let selectedNote = null;
-  let selectedProject = null;
   let isGuest = false;
   let saveTimeout;
   let saveStatus = 'Saved';
@@ -59,7 +63,11 @@
         project_id: selectedProject.id,
         folder_id: selectedProject.folders[0]?.id,
       };
-      selectedProject.notes = [...selectedProject.notes, newNote];
+      projectsStore.update((currentProjects) => {
+        const projectIndex = currentProjects.findIndex((p) => p.id === selectedProject.id);
+        currentProjects[projectIndex].notes.push(newNote);
+        return currentProjects;
+      });
       selectedNote = newNote;
       noteContent = newNote.content;
       return;
@@ -101,7 +109,11 @@
       return;
     }
 
-    selectedProject.notes = [...selectedProject.notes, data];
+    projectsStore.update((currentProjects) => {
+      const projectIndex = currentProjects.findIndex((p) => p.id === selectedProject.id);
+      currentProjects[projectIndex].notes.push(data);
+      return currentProjects;
+    });
     selectedNote = data;
     noteContent = data.content;
   };
@@ -111,8 +123,14 @@
     saveStatus = 'Saving...';
 
     if (isGuest) {
-      const noteIndex = selectedProject.notes.findIndex((n) => n.id === selectedNote.id);
-      selectedProject.notes[noteIndex].content = noteContent;
+      projectsStore.update((currentProjects) => {
+        const projectIndex = currentProjects.findIndex((p) => p.id === selectedProject.id);
+        const noteIndex = currentProjects[projectIndex].notes.findIndex(
+          (n) => n.id === selectedNote.id
+        );
+        currentProjects[projectIndex].notes[noteIndex].content = noteContent;
+        return currentProjects;
+      });
       setTimeout(() => (saveStatus = 'Saved'), 500);
       return;
     }
@@ -158,7 +176,7 @@
     </div>
   </header>
 
-  <Sidebar on:selectNote={handleSelectNote} bind:selectedProject {isGuest} />
+  <Sidebar on:selectNote={handleSelectNote} {isGuest} />
 
   <section class="main-content">
     {#if selectedNote}

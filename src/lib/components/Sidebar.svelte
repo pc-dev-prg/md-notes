@@ -2,7 +2,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { onMount, createEventDispatcher } from 'svelte';
   import { goto } from '$app/navigation';
-  import { sessionStore } from '$lib/store';
+  import { sessionStore, projectsStore, selectedProjectStore } from '$lib/store';
 
   const dispatch = createEventDispatcher();
 
@@ -11,13 +11,21 @@
     session = value;
   });
 
-  let projects = [];
-  export let selectedProject = null;
+  let projects;
+  projectsStore.subscribe((value) => {
+    projects = value;
+  });
+
+  let selectedProject;
+  selectedProjectStore.subscribe((value) => {
+    selectedProject = value;
+  });
+
   export let isGuest = false;
 
   onMount(async () => {
     if (isGuest) {
-      projects = JSON.parse(localStorage.getItem('guest-projects')) || [];
+      projectsStore.set(JSON.parse(localStorage.getItem('guest-projects')) || []);
       return;
     }
 
@@ -41,7 +49,7 @@
       return;
     }
 
-    projects = projectData;
+    projectsStore.set(projectData);
   }
 
   const handleLogout = async () => {
@@ -66,7 +74,7 @@
         notes: [],
         folders: [],
       };
-      projects = [newProject, ...projects];
+      projectsStore.update((currentProjects) => [newProject, ...currentProjects]);
       localStorage.setItem('guest-projects', JSON.stringify(projects));
       return;
     }
@@ -82,7 +90,7 @@
       return;
     }
 
-    projects = [data, ...projects];
+    projectsStore.update((currentProjects) => [data, ...currentProjects]);
   };
 
   function selectNote(note) {
@@ -90,7 +98,7 @@
   }
 
   function selectProject(project) {
-    selectedProject = project;
+    selectedProjectStore.set(project);
   }
 </script>
 
