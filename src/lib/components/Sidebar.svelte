@@ -24,6 +24,7 @@
 
   export let isGuest = false;
   let searchTerm = '';
+  let avatarUrl = null;
 
   $: filteredProjects = projects.filter((project) => {
     const term = searchTerm.toLowerCase();
@@ -50,6 +51,7 @@
     }
 
     await fetchProjects();
+    await fetchProfile();
   });
 
   async function fetchProjects() {
@@ -65,6 +67,20 @@
     }
 
     projectsStore.set(projectData);
+  }
+
+  async function fetchProfile() {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('avatar_url')
+      .eq('id', session.user.id)
+      .single();
+
+    if (error) {
+      console.error('Error fetching profile:', error);
+    } else {
+      avatarUrl = data.avatar_url;
+    }
   }
 
   const handleLogout = async () => {
@@ -190,7 +206,13 @@
 </script>
 
 <aside class="sidebar">
-  <div class="logo">MD Notes</div>
+  <div class="profile-section">
+    <a href="/profile">
+      <img src={avatarUrl || 'https://via.placeholder.com/150'} alt="Avatar" class="avatar" />
+    </a>
+    <div class="logo">MD Notes</div>
+    <button on:click={handleLogout}>Logout</button>
+  </div>
   <div class="search-bar">
     <input type="text" placeholder="Search..." bind:value={searchTerm} />
   </div>
@@ -249,11 +271,38 @@
     flex-direction: column;
     gap: 20px;
 
-    .logo {
-      font-size: 1.8em;
-      font-weight: 700;
-      color: #fff;
-      text-align: center;
+    .profile-section {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+
+      .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+      }
+
+      .logo {
+        font-size: 1.5em;
+        font-weight: 700;
+        color: #fff;
+      }
+
+      button {
+        margin-left: auto;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 8px;
+        cursor: pointer;
+        transition: all 0.3s ease;
+
+        &:hover {
+          background: rgba(255, 255, 255, 0.2);
+        }
+      }
     }
 
     .search-bar input {
