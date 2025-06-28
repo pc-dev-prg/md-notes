@@ -342,4 +342,24 @@
       }
     }
   }
+
+  @media (max-width: 768px) {
+    header {
+      padding: 15px 20px;
+    }
+
+    .hero {
+      h1 {
+        font-size: 3em;
+      }
+
+      p {
+        font-size: 1em;
+      }
+
+      .auth-card {
+        padding: 30px;
+      }
+    }
+  }
 </style>

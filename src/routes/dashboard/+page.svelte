@@ -22,6 +22,7 @@
   let isGuest = false;
   let saveTimeout;
   let saveStatus = 'Saved';
+  let sidebarOpen = true;
 
   onMount(async () => {
     if (session?.user?.id === 'guest') {
@@ -195,13 +196,30 @@
   }
 </script>
 
-<main>
+<main class:sidebar-closed={!sidebarOpen}>
   <div class="background-shapes"></div>
   <Sidebar on:selectNote={handleSelectNote} {isGuest} />
 
   <section class="main-content">
     <header>
       <div class="header-left">
+        <button class="hamburger" on:click={() => (sidebarOpen = !sidebarOpen)}>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <line x1="3" y1="12" x2="21" y2="12" />
+            <line x1="3" y1="6" x2="21" y2="6" />
+            <line x1="3" y1="18" x2="21" y2="18" />
+          </svg>
+        </button>
         {#if selectedNote}
           <h2>{selectedNote.title}</h2>
         {/if}
@@ -284,6 +302,7 @@
     grid-template-columns: 1fr 1fr;
     gap: 20px;
     padding: 20px;
+    transition: margin-left 0.3s ease;
   }
 
   header {
@@ -296,6 +315,20 @@
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
+
+    .header-left {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+    }
+
+    .hamburger {
+      display: none;
+      background: none;
+      border: none;
+      color: #fff;
+      cursor: pointer;
+    }
 
     .header-left h2 {
       font-size: 1.5em;
@@ -347,5 +380,29 @@
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 12px;
     height: 100%;
+  }
+
+  @media (max-width: 768px) {
+    .sidebar {
+      position: fixed;
+      left: -280px;
+      top: 0;
+      height: 100%;
+      z-index: 100;
+      transition: left 0.3s ease;
+    }
+
+    main:not(.sidebar-closed) .sidebar {
+      left: 0;
+    }
+
+    .main-content {
+      margin-left: 0;
+      grid-template-columns: 1fr;
+    }
+
+    header .hamburger {
+      display: block;
+    }
   }
 </style>
