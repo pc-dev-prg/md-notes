@@ -8,8 +8,14 @@
   let session = null;
   let projects = [];
   export let selectedProject = null;
+  export let isGuest = false;
 
   onMount(async () => {
+    if (isGuest) {
+      projects = JSON.parse(localStorage.getItem('guest-projects')) || [];
+      return;
+    }
+
     const { data: authData, error: authError } = await supabase.auth.getSession();
     session = authData?.session;
 
@@ -44,6 +50,11 @@
   }
 
   const handleLogout = async () => {
+    if (isGuest) {
+      localStorage.removeItem('guest-projects');
+      goto('/');
+      return;
+    }
     const { error } = await supabase.auth.signOut();
     if (error) alert(error.message);
   };
@@ -51,6 +62,18 @@
   const createNewProject = async () => {
     const name = prompt('Enter project name:');
     if (!name) return;
+
+    if (isGuest) {
+      const newProject = {
+        id: Math.random().toString(36).substring(2),
+        name,
+        notes: [],
+        folders: [],
+      };
+      projects = [newProject, ...projects];
+      localStorage.setItem('guest-projects', JSON.stringify(projects));
+      return;
+    }
 
     const { data, error } = await supabase
       .from('projects')
@@ -78,9 +101,7 @@
 <aside class="sidebar">
   <header>
     <div class="logo">MD Notes</div>
-    {#if session}
-      <button on:click={handleLogout}>Logout</button>
-    {/if}
+    <button on:click={handleLogout}>Logout</button>
   </header>
   <div class="projects-header">
     <h2>Projects</h2>

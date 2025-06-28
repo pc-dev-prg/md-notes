@@ -1,6 +1,7 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
   import { onMount } from 'svelte';
+  import { goto } from '$app/navigation';
 
   let email = '';
   let loading = false;
@@ -92,6 +93,11 @@
       loading = false;
     }
   };
+
+  const continueAsGuest = () => {
+    session = { user: { id: 'guest' } };
+    goto('/dashboard');
+  };
 </script>
 
 <main>
@@ -124,6 +130,9 @@
             {#if loading}Loading...{:else}Verify OTP{/if}
           </button>
         </form>
+        <div class="guest-login">
+          <button on:click={continueAsGuest}>Continue as Guest</button>
+        </div>
       </div>
     {:else}
       <p>You are logged in! Go to your <a href="/dashboard">dashboard</a>.</p>
@@ -271,6 +280,10 @@
         text-decoration: underline;
       }
     }
+  }
+
+  .guest-login {
+    margin-top: 20px;
   }
 
   .auth-card {

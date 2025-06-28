@@ -10,12 +10,15 @@
   let noteContent = '# Hello, Markdown!';
   let selectedNote = null;
   let selectedProject = null;
+  let isGuest = false;
 
   onMount(async () => {
     const { data } = await supabase.auth.getSession();
     session = data.session;
 
-    if (!session) {
+    if (session?.user?.id === 'guest') {
+      isGuest = true;
+    } else if (!session) {
       goto('/');
     }
 
@@ -28,6 +31,11 @@
   });
 
   const handleLogout = async () => {
+    if (isGuest) {
+      session = null;
+      goto('/');
+      return;
+    }
     const { error } = await supabase.auth.signOut();
     if (error) alert(error.message);
   };
@@ -45,6 +53,20 @@
 
     const title = prompt('Enter note title:');
     if (!title) return;
+
+    if (isGuest) {
+      const newNote = {
+        id: Math.random().toString(36).substring(2),
+        title,
+        content: '# New Note',
+        project_id: selectedProject.id,
+        folder_id: selectedProject.folders[0].id,
+      };
+      selectedProject.notes = [...selectedProject.notes, newNote];
+      selectedNote = newNote;
+      noteContent = newNote.content;
+      return;
+    }
 
     let folderId;
     if (selectedProject.folders.length === 0) {
@@ -90,6 +112,13 @@
   const saveNote = async () => {
     if (!selectedNote) return;
 
+    if (isGuest) {
+      const noteIndex = selectedProject.notes.findIndex((n) => n.id === selectedNote.id);
+      selectedProject.notes[noteIndex].content = noteContent;
+      alert('Note saved!');
+      return;
+    }
+
     const { data, error } = await supabase
       .from('notes')
       .update({ content: noteContent, updated_at: new Date().toISOString() })
@@ -120,7 +149,7 @@
     </div>
   </header>
 
-  <Sidebar on:selectNote={handleSelectNote} bind:selectedProject />
+  <Sidebar on:selectNote={handleSelectNote} bind:selectedProject {isGuest} />
 
   <section class="main-content">
     {#if selectedNote}
