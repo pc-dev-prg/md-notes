@@ -31,9 +31,11 @@
   let saveStatus = 'Saved';
   let sidebarOpen = true;
   let showShareModal = false;
+  let showHistoryModal = false;
   let collaboratorEmail = '';
   let permissionLevel = 'view';
   let channel;
+  let noteHistory = [];
 
   onMount(async () => {
     if (session?.user?.id === 'guest') {
@@ -302,6 +304,27 @@
     saveAs(blob, `${selectedNote.title}.md`);
   };
 
+  const fetchHistory = async () => {
+    if (!selectedNote) return;
+    const { data, error } = await supabase
+      .from('note_history')
+      .select('*')
+      .eq('note_id', selectedNote.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error fetching history:', error);
+    } else {
+      noteHistory = data;
+      showHistoryModal = true;
+    }
+  };
+
+  const restoreVersion = (historyItem) => {
+    noteContent = historyItem.content;
+    showHistoryModal = false;
+  };
+
   $: if (noteContent && selectedNote) {
     debouncedSave();
   }
@@ -339,6 +362,7 @@
         <Notifications />
         <span class="save-status">{saveStatus}</span>
         {#if selectedNote}
+          <button on:click={fetchHistory}>History</button>
           <button on:click={exportNote}>Export</button>
           <div class="public-toggle">
             <span>Share Publicly</span>
@@ -387,6 +411,24 @@
           </select>
           <button type="submit">Invite</button>
         </form>
+      </div>
+    </div>
+  {/if}
+
+  {#if showHistoryModal}
+    <div class="modal-overlay" on:click={() => (showHistoryModal = false)}>
+      <div class="modal" on:click|stopPropagation>
+        <h2>Version History</h2>
+        <ul>
+          {#each noteHistory as item}
+            <li>
+              <p>
+                <strong>{new Date(item.created_at).toLocaleString()}</strong>
+              </p>
+              <button on:click={() => restoreVersion(item)}>Restore</button>
+            </li>
+          {/each}
+        </ul>
       </div>
     </div>
   {/if}
@@ -659,6 +701,37 @@
         cursor: pointer;
       }
     }
+
+    ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+
+      li {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        border-radius: 8px;
+        background: var(--hover-bg);
+
+        p {
+          margin: 0;
+        }
+
+        button {
+          background: var(--accent-color);
+          border: none;
+          padding: 5px 10px;
+          border-radius: 8px;
+          color: #fff;
+          cursor: pointer;
+        }
+      }
+    }
   }
 
   @media (max-width: 768px) {
@@ -685,4 +758,5 @@
     }
   }
 </style>
+
 
