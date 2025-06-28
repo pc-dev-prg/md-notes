@@ -2,10 +2,15 @@
   import { supabase } from '$lib/supabaseClient';
   import { onMount, createEventDispatcher } from 'svelte';
   import { goto } from '$app/navigation';
+  import { sessionStore } from '$lib/store';
 
   const dispatch = createEventDispatcher();
 
-  let session = null;
+  let session;
+  sessionStore.subscribe((value) => {
+    session = value;
+  });
+
   let projects = [];
   export let selectedProject = null;
   export let isGuest = false;
@@ -16,20 +21,10 @@
       return;
     }
 
-    const { data: authData, error: authError } = await supabase.auth.getSession();
-    session = authData?.session;
-
     if (!session) {
       goto('/');
       return;
     }
-
-    supabase.auth.onAuthStateChange((_event, newSession) => {
-      session = newSession;
-      if (!newSession) {
-        goto('/');
-      }
-    });
 
     await fetchProjects();
   });
@@ -52,6 +47,7 @@
   const handleLogout = async () => {
     if (isGuest) {
       localStorage.removeItem('guest-projects');
+      sessionStore.set(null);
       goto('/');
       return;
     }

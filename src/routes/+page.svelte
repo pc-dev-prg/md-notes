@@ -2,10 +2,15 @@
   import { supabase } from '$lib/supabaseClient';
   import { onMount } from 'svelte';
   import { goto } from '$app/navigation';
+  import { sessionStore } from '$lib/store';
 
   let email = '';
   let loading = false;
-  let session = null;
+  let session;
+
+  sessionStore.subscribe((value) => {
+    session = value;
+  });
 
   let otp = '';
   const handleVerifyOtp = async () => {
@@ -41,11 +46,11 @@
 
   onMount(() => {
     supabase.auth.getSession().then(({ data }) => {
-      session = data.session;
+      sessionStore.set(data.session);
     });
 
     supabase.auth.onAuthStateChange((_event, newSession) => {
-      session = newSession;
+      sessionStore.set(newSession);
     });
   });
 
@@ -95,7 +100,7 @@
   };
 
   const continueAsGuest = () => {
-    session = { user: { id: 'guest' } };
+    sessionStore.set({ user: { id: 'guest' } });
     goto('/dashboard');
   };
 </script>

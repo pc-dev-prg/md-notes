@@ -5,34 +5,29 @@
   import Sidebar from '$lib/components/Sidebar.svelte';
   import NoteEditor from '$lib/components/NoteEditor.svelte';
   import NotePreviewer from '$lib/components/NotePreviewer.svelte';
+  import { sessionStore } from '$lib/store';
 
-  let session = null;
+  let session;
+  sessionStore.subscribe((value) => {
+    session = value;
+  });
+
   let noteContent = '# Hello, Markdown!';
   let selectedNote = null;
   let selectedProject = null;
   let isGuest = false;
 
   onMount(async () => {
-    const { data } = await supabase.auth.getSession();
-    session = data.session;
-
     if (session?.user?.id === 'guest') {
       isGuest = true;
     } else if (!session) {
       goto('/');
     }
-
-    supabase.auth.onAuthStateChange((_event, newSession) => {
-      session = newSession;
-      if (!newSession) {
-        goto('/');
-      }
-    });
   });
 
   const handleLogout = async () => {
     if (isGuest) {
-      session = null;
+      sessionStore.set(null);
       goto('/');
       return;
     }
@@ -60,7 +55,7 @@
         title,
         content: '# New Note',
         project_id: selectedProject.id,
-        folder_id: selectedProject.folders[0].id,
+        folder_id: selectedProject.folders[0]?.id,
       };
       selectedProject.notes = [...selectedProject.notes, newNote];
       selectedNote = newNote;
