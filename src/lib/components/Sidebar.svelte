@@ -93,6 +93,48 @@
     projectsStore.update((currentProjects) => [data, ...currentProjects]);
   };
 
+  const createNewFolder = async () => {
+    if (!selectedProject) {
+      alert('Please select a project first.');
+      return;
+    }
+
+    const name = prompt('Enter folder name:');
+    if (!name) return;
+
+    if (isGuest) {
+      const newFolder = {
+        id: Math.random().toString(36).substring(2),
+        name,
+        project_id: selectedProject.id,
+      };
+      projectsStore.update((currentProjects) => {
+        const projectIndex = currentProjects.findIndex((p) => p.id === selectedProject.id);
+        currentProjects[projectIndex].folders.push(newFolder);
+        return currentProjects;
+      });
+      localStorage.setItem('guest-projects', JSON.stringify(projects));
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('folders')
+      .insert({ name, project_id: selectedProject.id })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating folder:', error);
+      return;
+    }
+
+    projectsStore.update((currentProjects) => {
+      const projectIndex = currentProjects.findIndex((p) => p.id === selectedProject.id);
+      currentProjects[projectIndex].folders.push(data);
+      return currentProjects;
+    });
+  };
+
   function selectNote(note) {
     dispatch('selectNote', note);
   }
@@ -119,8 +161,25 @@
         >
           <span>{project.name}</span>
           {#if selectedProject && selectedProject.id === project.id}
+            <div class="folder-header">
+              <h3>Folders</h3>
+              <button on:click|stopPropagation={createNewFolder}>+</button>
+            </div>
             <ul>
-              {#each project.notes as note}
+              {#each project.folders as folder}
+                <li>
+                  <span>{folder.name}</span>
+                  <ul>
+                    {#each project.notes.filter((n) => n.folder_id === folder.id) as note}
+                      <li on:click|stopPropagation={() => selectNote(note)}>{note.title}</li>
+                    {/each}
+                  </ul>
+                </li>
+              {/each}
+            </ul>
+            <h3>Notes</h3>
+            <ul>
+              {#each project.notes.filter((n) => !n.folder_id) as note}
                 <li on:click|stopPropagation={() => selectNote(note)}>{note.title}</li>
               {/each}
             </ul>
@@ -149,12 +208,14 @@
       text-align: center;
     }
 
-    .projects-header {
+    .projects-header,
+    .folder-header {
       display: flex;
       justify-content: space-between;
       align-items: center;
 
-      h2 {
+      h2,
+      h3 {
         font-size: 1.2em;
         font-weight: 600;
         color: #fff;
@@ -176,6 +237,13 @@
         &:hover {
           background: rgba(255, 255, 255, 0.2);
         }
+      }
+    }
+
+    .folder-header {
+      margin-top: 15px;
+      h3 {
+        font-size: 1.1em;
       }
     }
 

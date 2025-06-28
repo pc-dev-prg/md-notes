@@ -55,13 +55,30 @@
     const title = prompt('Enter note title:');
     if (!title) return;
 
+    let folderId = null;
+    if (selectedProject.folders.length > 0) {
+      const folderNames = selectedProject.folders.map((f) => f.name);
+      const selectedFolder = prompt(
+        `Select a folder (optional):\n${folderNames.join('\n')}`
+      );
+      if (selectedFolder) {
+        const folder = selectedProject.folders.find((f) => f.name === selectedFolder);
+        if (folder) {
+          folderId = folder.id;
+        } else {
+          alert('Invalid folder name.');
+          return;
+        }
+      }
+    }
+
     if (isGuest) {
       const newNote = {
         id: Math.random().toString(36).substring(2),
         title,
         content: '# New Note',
         project_id: selectedProject.id,
-        folder_id: selectedProject.folders[0]?.id,
+        folder_id: folderId,
       };
       projectsStore.update((currentProjects) => {
         const projectIndex = currentProjects.findIndex((p) => p.id === selectedProject.id);
@@ -71,25 +88,6 @@
       selectedNote = newNote;
       noteContent = newNote.content;
       return;
-    }
-
-    let folderId;
-    if (selectedProject.folders.length === 0) {
-      const { data: newFolder, error: folderError } = await supabase
-        .from('folders')
-        .insert({ name: 'General', project_id: selectedProject.id })
-        .select()
-        .single();
-
-      if (folderError) {
-        console.error('Error creating folder:', folderError);
-        alert('Error creating folder.');
-        return;
-      }
-      folderId = newFolder.id;
-      selectedProject.folders = [newFolder];
-    } else {
-      folderId = selectedProject.folders[0].id;
     }
 
     const { data, error } = await supabase
