@@ -265,6 +265,24 @@
     }
   };
 
+  const togglePublic = async () => {
+    if (!selectedNote) return;
+
+    const { data, error } = await supabase
+      .from('notes')
+      .update({ is_public: !selectedNote.is_public })
+      .eq('id', selectedNote.id)
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error updating note:', error);
+      alert('Error updating note.');
+    } else {
+      selectedNote = data;
+    }
+  };
+
   $: if (noteContent && selectedNote) {
     debouncedSave();
   }
@@ -301,6 +319,20 @@
       <div class="header-right">
         <span class="save-status">{saveStatus}</span>
         {#if selectedNote}
+          <div class="public-toggle">
+            <span>Share Publicly</span>
+            <label class="switch">
+              <input type="checkbox" bind:checked={selectedNote.is_public} on:change={togglePublic} />
+              <span class="slider"></span>
+            </label>
+          </div>
+          {#if selectedNote.is_public}
+            <input
+              type="text"
+              readonly
+              value={`${window.location.origin}/public/${selectedNote.public_id}`}
+            />
+          {/if}
           <button on:click={() => (showShareModal = true)}>Share</button>
         {/if}
         {#if selectedProject}
@@ -489,6 +521,57 @@
 
       &:hover {
         background: rgba(255, 0, 0, 0.4);
+      }
+    }
+
+    .public-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 40px;
+        height: 20px;
+
+        input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: #ccc;
+          transition: 0.4s;
+          border-radius: 20px;
+
+          &:before {
+            position: absolute;
+            content: '';
+            height: 16px;
+            width: 16px;
+            left: 2px;
+            bottom: 2px;
+            background-color: white;
+            transition: 0.4s;
+            border-radius: 50%;
+          }
+        }
+
+        input:checked + .slider {
+          background-color: var(--accent-color);
+        }
+
+        input:checked + .slider:before {
+          transform: translateX(20px);
+        }
       }
     }
   }
