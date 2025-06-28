@@ -11,6 +11,7 @@
   let profile = null;
   let avatarUrl = null;
   let uploading = false;
+  let bio = '';
 
   onMount(async () => {
     if (session) {
@@ -25,6 +26,7 @@
       } else {
         profile = data;
         avatarUrl = profile.avatar_url;
+        bio = profile.bio || '';
       }
     }
   });
@@ -70,39 +72,72 @@
 
     uploading = false;
   };
+
+  const updateProfile = async () => {
+    const { error } = await supabase
+      .from('profiles')
+      .update({ bio })
+      .eq('id', session.user.id);
+
+    if (error) {
+      console.error('Error updating profile:', error);
+      alert('Error updating profile.');
+    } else {
+      alert('Profile updated successfully.');
+    }
+  };
 </script>
 
 <main>
   <h1>Profile</h1>
   {#if profile}
-    <div class="avatar-container">
-      <img src={avatarUrl || 'https://via.placeholder.com/150'} alt="Avatar" />
-      <label for="avatar-upload">
-        {uploading ? 'Uploading...' : 'Upload Avatar'}
-      </label>
-      <input
-        id="avatar-upload"
-        type="file"
-        accept="image/*"
-        on:change={uploadAvatar}
-        disabled={uploading}
-      />
+    <div class="profile-card">
+      <div class="avatar-container">
+        <img src={avatarUrl || 'https://via.placeholder.com/150'} alt="Avatar" />
+        <label for="avatar-upload">
+          {uploading ? 'Uploading...' : 'Upload Avatar'}
+        </label>
+        <input
+          id="avatar-upload"
+          type="file"
+          accept="image/*"
+          on:change={uploadAvatar}
+          disabled={uploading}
+        />
+      </div>
+      <div class="profile-details">
+        <h2>{profile.username}</h2>
+        <textarea placeholder="Tell us about yourself..." bind:value={bio}></textarea>
+        <button on:click={updateProfile}>Save Profile</button>
+      </div>
     </div>
-    <p>Username: {profile.username}</p>
   {/if}
 </main>
 
 <style lang="scss">
   main {
     padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+
+  .profile-card {
+    display: flex;
+    gap: 30px;
+    background: var(--sidebar-bg);
+    padding: 30px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    width: 100%;
+    max-width: 600px;
   }
 
   .avatar-container {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-    margin-bottom: 20px;
+    gap: 15px;
 
     img {
       width: 150px;
@@ -113,14 +148,50 @@
 
     label {
       cursor: pointer;
-      background: #00bfff;
+      background: var(--accent-color);
       color: white;
       padding: 10px 15px;
       border-radius: 8px;
+      text-align: center;
     }
 
     input[type='file'] {
       display: none;
+    }
+  }
+
+  .profile-details {
+    flex-grow: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+
+    h2 {
+      margin: 0;
+      font-size: 1.8em;
+    }
+
+    textarea {
+      width: 100%;
+      height: 120px;
+      padding: 10px;
+      border-radius: 8px;
+      border: 1px solid var(--border-color);
+      background: var(--input-bg);
+      color: var(--text-color);
+      font-family: 'Inter', sans-serif;
+      resize: none;
+    }
+
+    button {
+      background: var(--accent-color);
+      border: none;
+      padding: 10px 15px;
+      border-radius: 8px;
+      color: #fff;
+      font-size: 1em;
+      cursor: pointer;
+      align-self: flex-start;
     }
   }
 </style>
