@@ -1,6 +1,6 @@
 <script>
   import { supabase } from '$lib/supabaseClient';
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { goto } from '$app/navigation';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import NoteEditor from '$lib/components/NoteEditor.svelte';
@@ -28,12 +28,22 @@
   let saveTimeout;
   let saveStatus = 'Saved';
   let sidebarOpen = true;
+  let showShareModal = false;
+  let collaboratorEmail = '';
+  let permissionLevel = 'view';
+  let channel;
 
   onMount(async () => {
     if (session?.user?.id === 'guest') {
       isGuest = true;
     } else if (!session) {
       goto('/');
+    }
+  });
+
+  onDestroy(() => {
+    if (channel) {
+      supabase.removeChannel(channel);
     }
   });
 
@@ -48,8 +58,23 @@
   };
 
   function handleSelectNote(event) {
+    if (channel) {
+      supabase.removeChannel(channel);
+    }
+
     selectedNote = event.detail;
     noteContent = selectedNote.content;
+
+    if (selectedNote && !isGuest) {
+      channel = supabase.channel(`note:${selectedNote.id}`);
+      channel
+        .on('broadcast', { event: 'update' }, (payload) => {
+          if (payload.author !== session.user.id) {
+            noteContent = payload.content;
+          }
+        })
+        .subscribe();
+    }
   }
 
   const createNewNote = async () => {
@@ -149,6 +174,18 @@
       saveStatus = 'Error!';
       return;
     }
+
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'update',
+        payload: {
+          author: session.user.id,
+          content: noteContent,
+        },
+      });
+    }
+
     setTimeout(() => (saveStatus = 'Saved'), 500);
   };
 
@@ -196,6 +233,38 @@
     saveTimeout = setTimeout(saveNote, 500);
   };
 
+  const inviteCollaborator = async () => {
+    if (!collaboratorEmail) {
+      alert('Please enter an email address.');
+      return;
+    }
+
+    const { data: user, error: userError } = await supabase
+      .from('profiles')
+      .select('id')
+      .eq('username', collaboratorEmail)
+      .single();
+
+    if (userError || !user) {
+      alert('User not found.');
+      return;
+    }
+
+    const { error } = await supabase.from('note_collaborators').insert({
+      note_id: selectedNote.id,
+      user_id: user.id,
+      permission_level: permissionLevel,
+    });
+
+    if (error) {
+      console.error('Error inviting collaborator:', error);
+      alert('Error inviting collaborator.');
+    } else {
+      alert('Collaborator invited successfully.');
+      showShareModal = false;
+    }
+  };
+
   $: if (noteContent && selectedNote) {
     debouncedSave();
   }
@@ -231,6 +300,9 @@
       </div>
       <div class="header-right">
         <span class="save-status">{saveStatus}</span>
+        {#if selectedNote}
+          <button on:click={() => (showShareModal = true)}>Share</button>
+        {/if}
         {#if selectedProject}
           <button on:click={createNewNote}>New Note</button>
         {/if}
@@ -249,6 +321,22 @@
       <NotePreviewer content={noteContent} />
     </div>
   </section>
+
+  {#if showShareModal}
+    <div class="modal-overlay" on:click={() => (showShareModal = false)}>
+      <div class="modal" on:click|stopPropagation>
+        <h2>Invite Collaborator</h2>
+        <form on:submit|preventDefault={inviteCollaborator}>
+          <input type="email" placeholder="Enter email" bind:value={collaboratorEmail} />
+          <select bind:value={permissionLevel}>
+            <option value="view">Can view</option>
+            <option value="edit">Can edit</option>
+          </select>
+          <button type="submit">Invite</button>
+        </form>
+      </div>
+    </div>
+  {/if}
 </main>
 
 <style lang="scss">
@@ -412,6 +500,61 @@
     border: 1px solid var(--border-color);
     border-radius: 12px;
     height: 100%;
+  }
+
+  .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+  }
+
+  .modal {
+    background: var(--sidebar-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    padding: 30px;
+    width: 100%;
+    max-width: 400px;
+
+    h2 {
+      margin-top: 0;
+    }
+
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+
+      input,
+      select {
+        width: 100%;
+        padding: 10px 15px;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        background: var(--input-bg);
+        color: var(--text-color);
+        font-size: 1em;
+        box-sizing: border-box;
+      }
+
+      button {
+        background: var(--accent-color);
+        border: none;
+        padding: 10px 15px;
+        border-radius: 8px;
+        color: #fff;
+        font-size: 1em;
+        cursor: pointer;
+      }
+    }
   }
 
   @media (max-width: 768px) {
