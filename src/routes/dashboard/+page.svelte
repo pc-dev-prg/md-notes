@@ -148,6 +148,44 @@
     setTimeout(() => (saveStatus = 'Saved'), 500);
   };
 
+  const deleteNote = async () => {
+    if (!selectedNote) return;
+
+    const confirmed = confirm('Are you sure you want to delete this note?');
+    if (!confirmed) return;
+
+    if (isGuest) {
+      projectsStore.update((currentProjects) => {
+        const projectIndex = currentProjects.findIndex((p) => p.id === selectedProject.id);
+        currentProjects[projectIndex].notes = currentProjects[projectIndex].notes.filter(
+          (n) => n.id !== selectedNote.id
+        );
+        return currentProjects;
+      });
+      selectedNote = null;
+      noteContent = '';
+      return;
+    }
+
+    const { error } = await supabase.from('notes').delete().eq('id', selectedNote.id);
+
+    if (error) {
+      console.error('Error deleting note:', error);
+      alert('Error deleting note.');
+      return;
+    }
+
+    projectsStore.update((currentProjects) => {
+      const projectIndex = currentProjects.findIndex((p) => p.id === selectedProject.id);
+      currentProjects[projectIndex].notes = currentProjects[projectIndex].notes.filter(
+        (n) => n.id !== selectedNote.id
+      );
+      return currentProjects;
+    });
+    selectedNote = null;
+    noteContent = '';
+  };
+
   const debouncedSave = () => {
     clearTimeout(saveTimeout);
     saveStatus = 'Typing...';
@@ -174,6 +212,9 @@
         <span class="save-status">{saveStatus}</span>
         {#if selectedProject}
           <button on:click={createNewNote}>New Note</button>
+        {/if}
+        {#if selectedNote}
+          <button on:click={deleteNote} class="delete-button">Delete</button>
         {/if}
         {#if session}
           <button on:click={handleLogout}>Logout</button>
@@ -288,6 +329,15 @@
 
       &:hover {
         background: rgba(255, 255, 255, 0.2);
+      }
+    }
+
+    .delete-button {
+      background: rgba(255, 0, 0, 0.2);
+      border-color: rgba(255, 0, 0, 0.4);
+
+      &:hover {
+        background: rgba(255, 0, 0, 0.4);
       }
     }
   }
