@@ -52,4 +52,13 @@
     color: #ccc;
     font-style: italic;
   }
+
+  :global(a) {
+    color: #00bfff;
+    text-decoration: none;
+  }
+
+  :global(a:hover) {
+    text-decoration: underline;
+  }
 </style>
