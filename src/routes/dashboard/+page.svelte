@@ -5,6 +5,7 @@
   import Sidebar from '$lib/components/Sidebar.svelte';
   import NoteEditor from '$lib/components/NoteEditor.svelte';
   import NotePreviewer from '$lib/components/NotePreviewer.svelte';
+  import Notifications from '$lib/components/Notifications.svelte';
   import { sessionStore, projectsStore, selectedProjectStore, themeStore } from '$lib/store';
   import { saveAs } from 'file-saver';
 
@@ -261,6 +262,17 @@
       console.error('Error inviting collaborator:', error);
       alert('Error inviting collaborator.');
     } else {
+      const { error: notificationError } = await supabase.from('notifications').insert({
+        user_id: user.id,
+        sender_id: session.user.id,
+        note_id: selectedNote.id,
+        type: 'new_collaborator',
+      });
+
+      if (notificationError) {
+        console.error('Error creating notification:', notificationError);
+      }
+
       alert('Collaborator invited successfully.');
       showShareModal = false;
     }
@@ -324,6 +336,7 @@
         {/if}
       </div>
       <div class="header-right">
+        <Notifications />
         <span class="save-status">{saveStatus}</span>
         {#if selectedNote}
           <button on:click={exportNote}>Export</button>
@@ -672,3 +685,4 @@
     }
   }
 </style>
+
