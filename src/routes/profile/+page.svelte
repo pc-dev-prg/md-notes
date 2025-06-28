@@ -12,6 +12,9 @@
   let avatarUrl = null;
   let uploading = false;
   let bio = '';
+  let fullName = '';
+  let websiteUrl = '';
+  let twitterUrl = '';
 
   onMount(async () => {
     if (session) {
@@ -27,6 +30,9 @@
         profile = data;
         avatarUrl = profile.avatar_url;
         bio = profile.bio || '';
+        fullName = profile.full_name || '';
+        websiteUrl = profile.website_url || '';
+        twitterUrl = profile.twitter_url || '';
       }
     }
   });
@@ -76,7 +82,12 @@
   const updateProfile = async () => {
     const { error } = await supabase
       .from('profiles')
-      .update({ bio })
+      .update({
+        bio,
+        full_name: fullName,
+        website_url: websiteUrl,
+        twitter_url: twitterUrl,
+      })
       .eq('id', session.user.id);
 
     if (error) {
@@ -107,6 +118,9 @@
       </div>
       <div class="profile-details">
         <h2>{profile.username}</h2>
+        <input type="text" placeholder="Full Name" bind:value={fullName} />
+        <input type="text" placeholder="Website URL" bind:value={websiteUrl} />
+        <input type="text" placeholder="Twitter URL" bind:value={twitterUrl} />
         <textarea placeholder="Tell us about yourself..." bind:value={bio}></textarea>
         <button on:click={updateProfile}>Save Profile</button>
       </div>
@@ -171,9 +185,9 @@
       font-size: 1.8em;
     }
 
+    input,
     textarea {
       width: 100%;
-      height: 120px;
       padding: 10px;
       border-radius: 8px;
       border: 1px solid var(--border-color);
