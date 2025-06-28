@@ -4,6 +4,7 @@
   import { goto } from '$app/navigation';
   import { sessionStore, projectsStore, selectedProjectStore, themeStore } from '$lib/store';
   import { dndzone } from 'svelte-dnd-action';
+  import { openDB, getStore } from '$lib/local-db';
 
   const dispatch = createEventDispatcher();
 
@@ -30,6 +31,10 @@
   export let isGuest = false;
   let searchTerm = '';
   let avatarUrl = null;
+  let online = navigator.onLine;
+
+  window.addEventListener('online', () => (online = true));
+  window.addEventListener('offline', () => (online = false));
 
   $: filteredProjects = projects.filter((project) => {
     const term = searchTerm.toLowerCase();
@@ -55,8 +60,17 @@
       return;
     }
 
-    await fetchProjects();
-    await fetchProfile();
+    if (online) {
+      await fetchProjects();
+      await fetchProfile();
+    } else {
+      const db = await openDB();
+      const projectsStore = getStore('projects', 'readonly');
+      const request = projectsStore.getAll();
+      request.onsuccess = (event) => {
+        projectsStore.set(event.target.result);
+      };
+    }
   });
 
   async function fetchProjects() {
@@ -72,6 +86,11 @@
     }
 
     projectsStore.set(projectData);
+    const db = await openDB();
+    const projectsTx = db.transaction('projects', 'readwrite');
+    projectData.forEach((project) => {
+      projectsTx.objectStore('projects').put(project);
+    });
   }
 
   async function fetchProfile() {
@@ -222,35 +241,40 @@
     <div class="logo">MD Notes</div>
     <button on:click={handleLogout}>Logout</button>
   </div>
-  <div class="theme-toggle">
-    <span>{theme === 'dark' ? 'Dark' : 'Light'} Mode</span>
-    <button on:click={toggleTheme}>
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="20"
-        height="20"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-      >
-        {#if theme === 'dark'}
-          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
-        {:else}
-          <circle cx="12" cy="12" r="5" />
-          <line x1="12" y1="1" x2="12" y2="3" />
-          <line x1="12" y1="21" x2="12" y2="23" />
-          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
-          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
-          <line x1="1" y1="12" x2="3" y2="12" />
-          <line x1="21" y1="12" x2="23" y2="12" />
-          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
-          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
-        {/if}
-      </svg>
-    </button>
+  <div class="status-bar">
+    <div class="theme-toggle">
+      <span>{theme === 'dark' ? 'Dark' : 'Light'} Mode</span>
+      <button on:click={toggleTheme}>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="20"
+          height="20"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          {#if theme === 'dark'}
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          {:else}
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          {/if}
+        </svg>
+      </button>
+    </div>
+    <div class="offline-indicator" class:offline={!online}>
+      {online ? 'Online' : 'Offline'}
+    </div>
   </div>
   <div class="search-bar">
     <input type="text" placeholder="Search..." bind:value={searchTerm} />
@@ -344,13 +368,19 @@
       }
     }
 
-    .theme-toggle {
+    .status-bar {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 8px 12px;
       background: var(--button-bg);
       border-radius: 8px;
+    }
+
+    .theme-toggle {
+      display: flex;
+      align-items: center;
+      gap: 10px;
 
       span {
         color: var(--text-color);
@@ -361,6 +391,15 @@
         border: none;
         color: var(--text-color);
         cursor: pointer;
+      }
+    }
+
+    .offline-indicator {
+      font-style: italic;
+      color: var(--placeholder-color);
+
+      &.offline {
+        color: #ff6b6b;
       }
     }
 
