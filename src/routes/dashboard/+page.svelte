@@ -16,6 +16,8 @@
   let selectedNote = null;
   let selectedProject = null;
   let isGuest = false;
+  let saveTimeout;
+  let saveStatus = 'Saved';
 
   onMount(async () => {
     if (session?.user?.id === 'guest') {
@@ -106,11 +108,12 @@
 
   const saveNote = async () => {
     if (!selectedNote) return;
+    saveStatus = 'Saving...';
 
     if (isGuest) {
       const noteIndex = selectedProject.notes.findIndex((n) => n.id === selectedNote.id);
       selectedProject.notes[noteIndex].content = noteContent;
-      alert('Note saved!');
+      setTimeout(() => (saveStatus = 'Saved'), 500);
       return;
     }
 
@@ -121,17 +124,28 @@
 
     if (error) {
       console.error('Error saving note:', error);
-      alert('Error saving note.');
+      saveStatus = 'Error!';
       return;
     }
-    alert('Note saved!');
+    setTimeout(() => (saveStatus = 'Saved'), 500);
   };
+
+  const debouncedSave = () => {
+    clearTimeout(saveTimeout);
+    saveStatus = 'Typing...';
+    saveTimeout = setTimeout(saveNote, 500);
+  };
+
+  $: if (noteContent && selectedNote) {
+    debouncedSave();
+  }
 </script>
 
 <main>
   <header>
     <div class="logo">MD Notes</div>
     <div>
+      <span class="save-status">{saveStatus}</span>
       {#if selectedProject}
         <button on:click={createNewNote}>New Note</button>
       {/if}
@@ -191,6 +205,12 @@
       font-weight: bold;
       color: #00bfff;
       text-shadow: 0 0 8px rgba(0, 191, 255, 0.5);
+    }
+
+    .save-status {
+      margin-right: 20px;
+      font-style: italic;
+      color: #ccc;
     }
 
     button {
