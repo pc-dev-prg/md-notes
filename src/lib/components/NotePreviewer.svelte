@@ -44,4 +44,12 @@
     background-color: #8a2be2;
     color: white;
   }
+
+  :global(blockquote) {
+    border-left: 5px solid #8a2be2;
+    padding-left: 15px;
+    margin-left: 0;
+    color: #ccc;
+    font-style: italic;
+  }
 </style>
