@@ -167,9 +167,6 @@
       {#if selectedProject}
         <button on:click={createNewNote}>New Note</button>
       {/if}
-      {#if selectedNote}
-        <button on:click={saveNote}>Save</button>
-      {/if}
       {#if session}
         <button on:click={handleLogout}>Logout</button>
       {/if}
