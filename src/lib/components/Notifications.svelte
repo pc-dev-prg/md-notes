@@ -55,7 +55,7 @@
 </script>
 
 <div class="notifications-container">
-  <button class="notifications-toggle" on:click={() => (showNotifications = !showNotifications)}>
+  <button class="notifications-toggle" on:click={() => (showNotifications = !showNotifications)} aria-label="Toggle notifications">
     <svg
       xmlns="http://www.w3.org/2000/svg"
       width="24"
@@ -82,13 +82,13 @@
       {:else}
         <ul>
           {#each notifications as notification}
-            <li class:unread={!notification.is_read} on:click={() => markAsRead(notification.id)}>
+            <button class:unread={!notification.is_read} on:click={() => markAsRead(notification.id)}>
               <p>
                 <strong>{notification.sender.username}</strong>
                 invited you to collaborate on a note.
               </p>
               <span>{new Date(notification.created_at).toLocaleString()}</span>
-            </li>
+            </button>
           {/each}
         </ul>
       {/if}
@@ -147,11 +147,17 @@
       flex-direction: column;
       gap: 10px;
 
-      li {
+      button {
         padding: 10px;
         border-radius: 8px;
         cursor: pointer;
         transition: all 0.3s ease;
+        display: block;
+        width: 100%;
+        text-align: left;
+        background: none;
+        border: none;
+        color: var(--text-color);
 
         &.unread {
           background: var(--selected-bg);

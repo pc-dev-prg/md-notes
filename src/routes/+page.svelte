@@ -1,365 +1,444 @@
 <script>
-  import { supabase } from '$lib/supabaseClient';
-  import { onMount } from 'svelte';
-  import { goto } from '$app/navigation';
-  import { sessionStore } from '$lib/store';
+	import { supabase } from '$lib/supabaseClient';
+	import { onMount } from 'svelte';
+	import { goto } from '$app/navigation';
+	import { sessionStore } from '$lib/store';
+	import { sineIn } from 'svelte/easing';
+	import { fly } from 'svelte/transition';
 
-  let email = '';
-  let loading = false;
-  let session;
+	let email = '';
+	let loading = false;
+	let message = '';
+	let session;
+	let showModal = false;
 
-  sessionStore.subscribe((value) => {
-    session = value;
-  });
+	sessionStore.subscribe((value) => {
+		session = value;
+	});
 
-  let otp = '';
-  const handleVerifyOtp = async () => {
-    try {
-      loading = true;
-      const storedOtp = localStorage.getItem('otp');
-      const storedEmail = localStorage.getItem('email');
+	onMount(() => {
+		supabase.auth.getSession().then(({ data }) => {
+			sessionStore.set(data.session);
+			if (data.session) {
+				goto('/dashboard');
+			}
+		});
 
-      if (!storedOtp || !storedEmail || otp !== storedOtp) {
-        alert('Invalid OTP. Please try again.');
-        return;
-      }
+		const { data: authListener } = supabase.auth.onAuthStateChange((_event, newSession) => {
+			sessionStore.set(newSession);
+			if (newSession) {
+				goto('/dashboard');
+			}
+		});
 
-      const { data, error } = await supabase.auth.verifyOtp({
-        email: storedEmail,
-        token: otp,
-        type: 'email',
-      });
+		return () => {
+			authListener.subscription.unsubscribe();
+		};
+	});
 
-      if (error) {
-        console.error('Error verifying OTP:', error);
-        alert('Failed to verify OTP. Please try again.');
-        throw error;
-      }
+	const handleLogin = async () => {
+		try {
+			loading = true;
+			message = '';
+			const { error } = await supabase.auth.signInWithOtp({
+				email: email,
+				options: {
+					shouldCreateUser: true,
+					emailRedirectTo: `${window.location.origin}/dashboard`
+				}
+			});
 
-      alert('Successfully signed in!');
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      loading = false;
-    }
-  };
+			if (error) {
+				throw error;
+			}
 
-  onMount(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      sessionStore.set(data.session);
-    });
+			message = 'Check your email for the magic link!';
+		} catch (error) {
+			message = error.message;
+		} finally {
+			loading = false;
+		}
+	};
 
-    supabase.auth.onAuthStateChange((_event, newSession) => {
-      sessionStore.set(newSession);
-    });
-  });
-
-  const handleLogin = async () => {
-    try {
-      loading = true;
-      // Generate a random 6-digit OTP
-      const otpValue = Math.floor(100000 + Math.random() * 900000);
-
-      // Send the OTP via email using Supabase Functions or a third-party service
-      // (This requires setting up a Supabase Function or integrating with a service like SendGrid)
-      const { data, error } = await supabase.functions.invoke('send-otp', {
-        body: {
-          email: email,
-          otp: otpValue,
-        },
-      });
-
-      if (error) {
-        console.error('Error sending OTP:', error);
-        alert('Failed to send OTP. Please try again.');
-        throw error;
-      }
-
-      // Store the OTP in local storage (for demonstration purposes only, not recommended for production)
-      localStorage.setItem('otp', otpValue);
-      localStorage.setItem('email', email);
-
-      alert('Check your email for the OTP!');
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      loading = false;
-    }
-  };
-
-  const handleLogout = async () => {
-    try {
-      loading = true;
-      const { error } = await supabase.auth.signOut();
-      if (error) throw error;
-    } catch (error) {
-      alert(error.message);
-    } finally {
-      loading = false;
-    }
-  };
-
-  const continueAsGuest = () => {
-    sessionStore.set({ user: { id: 'guest' } });
-    goto('/dashboard');
-  };
+	const continueAsGuest = () => {
+		const guestSession = { user: { id: 'guest' } };
+		sessionStore.set(guestSession);
+		localStorage.setItem('session', JSON.stringify(guestSession));
+		goto('/dashboard');
+	};
 </script>
 
-<main>
-  <div class="background-shapes"></div>
-  <header>
-    <div class="logo">MD Notes</div>
-    {#if session}
-      <button on:click={handleLogout} disabled={loading}>Logout</button>
-    {:else}
-      <button on:click={() => {}} disabled={loading}>Sign In / Register</button>
-    {/if}
-  </header>
+<div class="landing-container">
+	<div class="background-shapes"></div>
+	<header>
+		<div class="logo">MD Notes</div>
+		<nav>
+			<button on:click={() => (showModal = true)}>Sign In / Register</button>
+		</nav>
+	</header>
 
-  <section class="hero">
-    <h1>Welcome to MD Notes</h1>
-    <p>Your futuristic Markdown note-taking experience.</p>
-    {#if !session}
-      <div class="auth-card">
-        <h2>Sign in with Magic Link</h2>
-        <form on:submit|preventDefault={handleLogin}>
-          <input type="email" placeholder="Your email" value="petr.cafourek@gmail.com" />
-          <button type="submit" disabled={loading}>
-            {#if loading}Loading...{:else}Send Magic Link{/if}
-          </button>
-        </form>
-        <p>Check your email for the OTP!</p>
-        <h2>Enter OTP</h2>
-        <form on:submit|preventDefault={handleVerifyOtp}>
-          <input type="text" placeholder="Enter OTP" bind:value={otp} />
-          <button type="submit" disabled={loading}>
-            {#if loading}Loading...{:else}Verify OTP{/if}
-          </button>
-        </form>
-        <div class="guest-login">
-          <button on:click={continueAsGuest}>Continue as Guest</button>
-        </div>
-      </div>
-    {:else}
-      <p>You are logged in! Go to your <a href="/dashboard">dashboard</a>.</p>
-    {/if}
-  </section>
-</main>
+	<main>
+		<section class="hero">
+			<div class="hero-content">
+				<h1
+					in:fly={{ y: -20, duration: 800, delay: 200, easing: sineIn }}
+					out:fly={{ y: -20, duration: 400, easing: sineIn }}
+				>
+					Your Ideas, Beautifully Organized
+				</h1>
+				<p
+					in:fly={{ y: -20, duration: 800, delay: 400, easing: sineIn }}
+					out:fly={{ y: -20, duration: 400, easing: sineIn }}
+				>
+					MD Notes is a sleek, futuristic Markdown editor designed for clarity and focus.
+				</p>
+				<div
+					class="cta-buttons"
+					in:fly={{ y: -20, duration: 800, delay: 600, easing: sineIn }}
+					out:fly={{ y: -20, duration: 400, easing: sineIn }}
+				>
+					<button class="primary" on:click={() => (showModal = true)}>Get Started</button>
+					<button class="secondary" on:click={continueAsGuest}>Continue as Guest</button>
+				</div>
+			</div>
+			<div
+				class="hero-image"
+				in:fly={{ y: 20, duration: 800, delay: 800, easing: sineIn }}
+				out:fly={{ y: 20, duration: 400, easing: sineIn }}
+			>
+				<img src="https://placehold.co/800x600/0a0a0a/e0e0e0?text=MD+Notes" alt="App Screenshot" />
+			</div>
+		</section>
+
+		<section class="features">
+			<div class="feature">
+				<img src="https://placehold.co/400x300/0a0a0a/00aaff?text=Real-time+Sync" alt="Real-time Sync" />
+				<h3>Real-time Sync</h3>
+				<p>Keep your notes updated across all devices, instantly.</p>
+			</div>
+			<div class="feature">
+				<img
+					src="https://placehold.co/400x300/0a0a0a/9c27b0?text=Markdown+Preview"
+					alt="Markdown Preview"
+				/>
+				<h3>Markdown Preview</h3>
+				<p>See your formatted text as you type with a live preview.</p>
+			</div>
+			<div class="feature">
+				<img
+					src="https://placehold.co/400x300/0a0a0a/e0e0e0?text=Secure+Authentication"
+					alt="Secure Authentication"
+				/>
+				<h3>Secure Authentication</h3>
+				<p>Magic link login ensures your notes are safe and sound.</p>
+			</div>
+		</section>
+	</main>
+
+	<footer>
+		<p>&copy; 2025 MD Notes. All rights reserved.</p>
+	</footer>
+</div>
+
+{#if showModal}
+	<div class="modal-overlay" on:click={() => (showModal = false)}>
+		<div class="modal" on:click|stopPropagation>
+			<h2>Sign in / Register</h2>
+			<form on:submit|preventDefault={handleLogin}>
+				<input type="email" placeholder="Your email" bind:value={email} />
+				<button type="submit" disabled={loading}>
+					{#if loading}Sending...{:else}Send Magic Link{/if}
+				</button>
+			</form>
+			{#if message}
+				<p class="message">{message}</p>
+			{/if}
+		</div>
+	</div>
+{/if}
 
 <style lang="scss">
-  :global(body) {
-    margin: 0;
-    background-color: #0d0d0d;
-    color: #e0e0e0;
-    font-family: 'Inter', sans-serif;
-  }
+	:global(body) {
+		margin: 0;
+		background-color: #0a0a0a;
+		color: #e0e0e0;
+		font-family: 'Inter', sans-serif;
+	}
 
-  main {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
-    overflow: hidden;
-  }
+	.landing-container {
+		position: relative;
+		overflow-x: hidden;
+	}
 
-  .background-shapes {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: -1;
-    background: #0d0d0d;
+	.background-shapes {
+		position: absolute;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		z-index: -1;
+		background: #0a0a0a;
 
-    &::before,
-    &::after {
-      content: '';
-      position: absolute;
-      border-radius: 50%;
-      filter: blur(100px);
-    }
+		&::before,
+		&::after {
+			content: '';
+			position: absolute;
+			border-radius: 50%;
+			filter: blur(150px);
+			opacity: 0.2;
+		}
 
-    &::before {
-      width: 300px;
-      height: 300px;
-      background: rgba(0, 191, 255, 0.2);
-      top: -50px;
-      left: -50px;
-    }
+		&::before {
+			width: 400px;
+			height: 400px;
+			background: #00aaff;
+			top: -100px;
+			left: -100px;
+		}
 
-    &::after {
-      width: 400px;
-      height: 400px;
-      background: rgba(138, 43, 226, 0.2);
-      bottom: -100px;
-      right: -100px;
-    }
-  }
+		&::after {
+			width: 500px;
+			height: 500px;
+			background: #9c27b0;
+			bottom: -200px;
+			right: -200px;
+		}
+	}
 
-  header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 20px 40px;
-    background: rgba(255, 255, 255, 0.05);
-    backdrop-filter: blur(10px);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+	header {
+		display: flex;
+		justify-content: space-between;
+		align-items: center;
+		padding: 20px 40px;
+		background: rgba(10, 10, 10, 0.5);
+		backdrop-filter: blur(10px);
+		border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+		position: sticky;
+		top: 0;
+		z-index: 10;
 
-    .logo {
-      font-size: 1.5em;
-      font-weight: 700;
-      color: #fff;
-    }
+		.logo {
+			font-size: 1.5em;
+			font-weight: 700;
+			color: #e0e0e0;
+		}
 
-    button {
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.2);
-      padding: 10px 20px;
-      border-radius: 8px;
-      color: white;
-      font-size: 1em;
-      cursor: pointer;
-      transition: all 0.3s ease;
+		nav button {
+			background: transparent;
+			border: 1px solid #00aaff;
+			padding: 10px 20px;
+			border-radius: 8px;
+			color: #00aaff;
+			font-size: 1em;
+			cursor: pointer;
+			transition: all 0.3s ease;
 
-      &:hover {
-        background: rgba(255, 255, 255, 0.2);
-      }
+			&:hover {
+				background: rgba(0, 170, 255, 0.1);
+				color: #fff;
+			}
+		}
+	}
 
-      &:disabled {
-        background: #333;
-        cursor: not-allowed;
-      }
-    }
-  }
+	main {
+		padding: 0 40px;
+	}
 
-  .hero {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    text-align: center;
-    padding: 20px;
+	.hero {
+		display: grid;
+		grid-template-columns: 1fr 1fr;
+		align-items: center;
+		gap: 60px;
+		min-height: 80vh;
+		padding: 80px 0;
 
-    h1 {
-      font-size: 4em;
-      font-weight: 800;
-      color: #fff;
-      margin-bottom: 20px;
-    }
+		.hero-content {
+			h1 {
+				font-size: 4em;
+				font-weight: 800;
+				color: #fff;
+				margin-bottom: 20px;
+				line-height: 1.2;
+			}
 
-    p {
-      font-size: 1.2em;
-      color: #a0a0a0;
-      margin-bottom: 40px;
-    }
+			p {
+				font-size: 1.2em;
+				color: #888888;
+				margin-bottom: 40px;
+				max-width: 500px;
+			}
 
-    .auth-card {
-      background: rgba(255, 255, 255, 0.05);
-      backdrop-filter: blur(10px);
-      padding: 40px;
-      border-radius: 16px;
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      width: 100%;
-      max-width: 400px;
+			.cta-buttons {
+				display: flex;
+				gap: 20px;
 
-      h2 {
-        color: #fff;
-        margin-bottom: 30px;
-        font-size: 1.5em;
-        font-weight: 600;
-      }
+				button {
+					padding: 15px 30px;
+					border-radius: 8px;
+					font-size: 1.1em;
+					font-weight: 600;
+					cursor: pointer;
+					transition: all 0.3s ease;
+				}
 
-      form {
-        display: flex;
-        flex-direction: column;
-        gap: 20px;
+				.primary {
+					background: #00aaff;
+					border: none;
+					color: #0a0a0a;
 
-        input {
-          padding: 15px;
-          border: 1px solid rgba(255, 255, 255, 0.2);
-          border-radius: 8px;
-          background: rgba(255, 255, 255, 0.1);
-          color: #fff;
-          font-size: 1em;
+					&:hover {
+						background: #33bbff;
+					}
+				}
 
-          &::placeholder {
-            color: #a0a0a0;
-          }
+				.secondary {
+					background: transparent;
+					border: 1px solid #888888;
+					color: #888888;
 
-          &:focus {
-            outline: none;
-            border-color: #00bfff;
-          }
-        }
+					&:hover {
+						border-color: #fff;
+						color: #fff;
+					}
+				}
+			}
+		}
 
-        button {
-          background: #00bfff;
-          border: none;
-          padding: 15px;
-          border-radius: 8px;
-          color: white;
-          font-size: 1.1em;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
+		.hero-image img {
+			width: 100%;
+			border-radius: 16px;
+			box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+		}
+	}
 
-          &:hover {
-            background: #00a0cc;
-          }
+	.features {
+		display: grid;
+		grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+		gap: 40px;
+		padding: 80px 0;
+		text-align: center;
 
-          &:disabled {
-            background: #333;
-            cursor: not-allowed;
-          }
-        }
-      }
-    }
+		.feature {
+			img {
+				width: 100%;
+				border-radius: 12px;
+				margin-bottom: 20px;
+			}
 
-    a {
-      color: #00bfff;
-      text-decoration: none;
-      font-weight: bold;
+			h3 {
+				font-size: 1.5em;
+				font-weight: 600;
+				color: #fff;
+				margin-bottom: 10px;
+			}
 
-      &:hover {
-        text-decoration: underline;
-      }
-    }
-  }
+			p {
+				color: #888888;
+			}
+		}
+	}
 
-  .guest-login {
-    margin-top: 20px;
+	footer {
+		text-align: center;
+		padding: 40px;
+		border-top: 1px solid rgba(255, 255, 255, 0.08);
+		color: #888888;
+	}
 
-    button {
-      background: none;
-      border: none;
-      color: #a0a0a0;
-      cursor: pointer;
-      font-size: 0.9em;
+	.modal-overlay {
+		position: fixed;
+		top: 0;
+		left: 0;
+		width: 100%;
+		height: 100%;
+		background: rgba(0, 0, 0, 0.7);
+		backdrop-filter: blur(10px);
+		display: flex;
+		justify-content: center;
+		align-items: center;
+		z-index: 1000;
+	}
 
-      &:hover {
-        color: #fff;
-      }
-    }
-  }
+	.modal {
+		background: rgba(20, 20, 20, 0.8);
+		padding: 40px;
+		border-radius: 16px;
+		border: 1px solid rgba(255, 255, 255, 0.1);
+		width: 100%;
+		max-width: 400px;
 
-  @media (max-width: 768px) {
-    header {
-      padding: 15px 20px;
-    }
+		h2 {
+			color: #e0e0e0;
+			margin-bottom: 30px;
+			font-size: 1.5em;
+			font-weight: 600;
+			text-align: center;
+		}
 
-    .hero {
-      h1 {
-        font-size: 3em;
-      }
+		form {
+			display: flex;
+			flex-direction: column;
+			gap: 20px;
 
-      p {
-        font-size: 1em;
-      }
+			input {
+				padding: 15px;
+				border: 1px solid rgba(255, 255, 255, 0.1);
+				border-radius: 8px;
+				background: rgba(0, 0, 0, 0.2);
+				color: #e0e0e0;
+				font-size: 1em;
 
-      .auth-card {
-        padding: 30px;
-      }
-    }
-  }
+				&::placeholder {
+					color: #888888;
+				}
+
+				&:focus {
+					outline: none;
+					border-color: #00aaff;
+				}
+			}
+
+			button {
+				background: #00aaff;
+				border: none;
+				padding: 15px;
+				border-radius: 8px;
+				color: #0a0a0a;
+				font-size: 1.1em;
+				font-weight: 600;
+				cursor: pointer;
+				transition: all 0.3s ease;
+
+				&:hover {
+					background: #33bbff;
+				}
+
+				&:disabled {
+					background: #555;
+					color: #888;
+					cursor: not-allowed;
+				}
+			}
+		}
+
+		.message {
+			margin-top: 20px;
+			color: #00aaff;
+			font-size: 1em;
+			text-align: center;
+		}
+	}
+
+	@media (max-width: 768px) {
+		.hero {
+			grid-template-columns: 1fr;
+			text-align: center;
+
+			.hero-content {
+				.cta-buttons {
+					justify-content: center;
+				}
+			}
+		}
+	}
 </style>

@@ -2,6 +2,7 @@
   import { supabase } from '$lib/supabaseClient';
   import { onMount, createEventDispatcher } from 'svelte';
   import { goto } from '$app/navigation';
+  import { page } from '$app/stores';
   import { sessionStore, projectsStore, selectedProjectStore, themeStore } from '$lib/store';
   import { dndzone } from 'svelte-dnd-action';
   import { openDB, getStore } from '$lib/local-db';
@@ -31,10 +32,7 @@
   export let isGuest = false;
   let searchTerm = '';
   let avatarUrl = null;
-  let online = navigator.onLine;
-
-  window.addEventListener('online', () => (online = true));
-  window.addEventListener('offline', () => (online = false));
+  let online = true;
 
   $: filteredProjects = projects.filter((project) => {
     const term = searchTerm.toLowerCase();
@@ -50,6 +48,10 @@
   });
 
   onMount(async () => {
+    online = navigator.onLine;
+    window.addEventListener('online', () => (online = true));
+    window.addEventListener('offline', () => (online = false));
+
     if (isGuest) {
       projectsStore.set(JSON.parse(localStorage.getItem('guest-projects')) || []);
       return;
@@ -65,8 +67,8 @@
       await fetchProfile();
     } else {
       const db = await openDB();
-      const projectsStore = getStore('projects', 'readonly');
-      const request = projectsStore.getAll();
+      const store = getStore('projects', 'readonly');
+      const request = store.getAll();
       request.onsuccess = (event) => {
         projectsStore.set(event.target.result);
       };
@@ -148,12 +150,7 @@
     projectsStore.update((currentProjects) => [data, ...currentProjects]);
   };
 
-  const createNewFolder = async () => {
-    if (!selectedProject) {
-      alert('Please select a project first.');
-      return;
-    }
-
+  const createNewFolder = async (projectId) => {
     const name = prompt('Enter folder name:');
     if (!name) return;
 
@@ -161,10 +158,10 @@
       const newFolder = {
         id: Math.random().toString(36).substring(2),
         name,
-        project_id: selectedProject.id,
+        project_id: projectId,
       };
       projectsStore.update((currentProjects) => {
-        const projectIndex = currentProjects.findIndex((p) => p.id === selectedProject.id);
+        const projectIndex = currentProjects.findIndex((p) => p.id === projectId);
         currentProjects[projectIndex].folders.push(newFolder);
         return currentProjects;
       });
@@ -174,7 +171,7 @@
 
     const { data, error } = await supabase
       .from('folders')
-      .insert({ name, project_id: selectedProject.id })
+      .insert({ name, project_id: projectId, user_id: session.user.id })
       .select()
       .single();
 
@@ -184,15 +181,75 @@
     }
 
     projectsStore.update((currentProjects) => {
-      const projectIndex = currentProjects.findIndex((p) => p.id === selectedProject.id);
+      const projectIndex = currentProjects.findIndex((p) => p.id === projectId);
       currentProjects[projectIndex].folders.push(data);
       return currentProjects;
     });
   };
 
-  function selectNote(note) {
-    dispatch('selectNote', note);
-  }
+  const createNewNote = async (projectId) => {
+    const title = prompt('Enter note title:');
+    if (!title) return;
+
+    let folderId = null;
+    const project = projects.find(p => p.id === projectId);
+    if (project.folders.length > 0) {
+      const folderNames = project.folders.map((f) => f.name);
+      const selectedFolder = prompt(
+        `Select a folder (optional):\n${folderNames.join('\n')}`
+      );
+      if (selectedFolder) {
+        const folder = project.folders.find((f) => f.name === selectedFolder);
+        if (folder) {
+          folderId = folder.id;
+        }
+      } else {
+        alert('Invalid folder name.');
+        return;
+      }
+    }
+
+    if (isGuest) {
+      const newNote = {
+        id: Math.random().toString(36).substring(2),
+        title,
+        content: '# New Note',
+        project_id: projectId,
+        folder_id: folderId,
+      };
+      projectsStore.update((currentProjects) => {
+        const projectIndex = currentProjects.findIndex((p) => p.id === projectId);
+        currentProjects[projectIndex].notes.push(newNote);
+        return currentProjects;
+      });
+      goto(`/dashboard/${newNote.id}`);
+      return;
+    }
+
+    const { data, error } = await supabase
+      .from('notes')
+      .insert({
+        title,
+        content: '# New Note',
+        user_id: session.user.id,
+        project_id: projectId,
+        folder_id: folderId,
+      })
+      .select()
+      .single();
+
+    if (error) {
+      console.error('Error creating note:', error);
+      return;
+    }
+
+    projectsStore.update((currentProjects) => {
+      const projectIndex = currentProjects.findIndex((p) => p.id === projectId);
+      currentProjects[projectIndex].notes.push(data);
+      return currentProjects;
+    });
+    goto(`/dashboard/${data.id}`);
+  };
 
   function selectProject(project) {
     selectedProjectStore.set(project);
@@ -248,7 +305,7 @@
 
 <aside class="sidebar">
   <div class="profile-section">
-    <a href="/profile" class="avatar-link">
+    <a href="/profile" class="avatar-link" aria-label="User Profile">
       <svg
         xmlns="http://www.w3.org/2000/svg"
         width="40"
@@ -270,8 +327,7 @@
   </div>
   <div class="status-bar">
     <div class="theme-toggle">
-      <span>{theme === 'dark' ? 'Dark' : 'Light'} Mode</span>
-      <button on:click={toggleTheme}>
+      <button on:click={toggleTheme} aria-label="Toggle theme">
         <svg
           xmlns="http://www.w3.org/2000/svg"
           width="20"
@@ -308,7 +364,7 @@
   </div>
   <div class="projects-header">
     <h2>Projects</h2>
-    <button on:click={createNewProject}>+</button>
+    <button on:click={createNewProject} aria-label="Create new project">+</button>
   </div>
   <div class="import-section">
     <label for="import-note">Import Note</label>
@@ -323,11 +379,14 @@
           class:selected={selectedProject && selectedProject.id === project.id}
           on:click={() => selectProject(project)}
         >
-          <span>{project.name}</span>
+          <div class="project-title">
+            <span>{project.name}</span>
+            <button on:click|stopPropagation={() => createNewNote(project.id)} aria-label="Create new note">+</button>
+          </div>
           {#if selectedProject && selectedProject.id === project.id}
             <div class="folder-header">
               <h3>Folders</h3>
-              <button on:click|stopPropagation={createNewFolder}>+</button>
+              <button on:click|stopPropagation={() => createNewFolder(project.id)} aria-label="Create new folder">+</button>
             </div>
             <ul use:dndzone={{ items: project.folders }} on:consider={(e) => handleDnd(e, project.folders)} on:finalize={(e) => handleDnd(e, project.folders)}>
               {#each project.folders as folder (folder.id)}
@@ -335,7 +394,7 @@
                   <span>{folder.name}</span>
                   <ul use:dndzone={{ items: project.notes.filter((n) => n.folder_id === folder.id) }} on:consider={(e) => handleDnd(e, project.notes)} on:finalize={(e) => handleDnd(e, project.notes)}>
                     {#each project.notes.filter((n) => n.folder_id === folder.id) as note (note.id)}
-                      <li on:click|stopPropagation={() => selectNote(note)}>{note.title}</li>
+                      <button on:click|stopPropagation={() => goto(`/dashboard/${note.id}`)} class:selected={$page.params.noteId === note.id}>{note.title}</button>
                     {/each}
                   </ul>
                 </li>
@@ -344,7 +403,7 @@
             <h3>Notes</h3>
             <ul use:dndzone={{ items: project.notes.filter((n) => !n.folder_id) }} on:consider={(e) => handleDnd(e, project.notes)} on:finalize={(e) => handleDnd(e, project.notes)}>
               {#each project.notes.filter((n) => !n.folder_id) as note (note.id)}
-                <li on:click|stopPropagation={() => selectNote(note)}>{note.title}</li>
+                <button on:click|stopPropagation={() => goto(`/dashboard/${note.id}`)} class:selected={$page.params.noteId === note.id}>{note.title}</button>
               {/each}
             </ul>
           {/if}
@@ -459,6 +518,12 @@
       }
     }
 
+    .project-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
     .projects-header,
     .folder-header {
       display: flex;
@@ -473,6 +538,11 @@
         margin: 0;
       }
 
+      .projects-header-buttons {
+        display: flex;
+        gap: 10px;
+      }
+
       button {
         background: var(--button-bg);
         border: 1px solid var(--border-color);
@@ -481,9 +551,12 @@
         height: 30px;
         border-radius: 8px;
         font-size: 1.5em;
-        line-height: 28px;
+        line-height: 1;
         cursor: pointer;
         transition: all 0.3s ease;
+        display: flex;
+        justify-content: center;
+        align-items: center;
 
         &:hover {
           background: var(--button-hover-bg);
@@ -501,7 +574,7 @@
     .import-section {
       label {
         display: block;
-        width: 100%;
+        width: auto;
         padding: 10px 15px;
         border-radius: 8px;
         background: var(--button-bg);
@@ -533,12 +606,17 @@
       flex-direction: column;
       gap: 5px;
 
-      li {
+      button, li {
         padding: 10px 15px;
         border-radius: 8px;
         color: var(--placeholder-color);
         cursor: pointer;
         transition: all 0.3s ease;
+        display: block;
+        width: 100%;
+        text-align: left;
+        background: none;
+        border: none;
 
         &.selected {
           background: var(--selected-bg);
@@ -560,7 +638,7 @@
           flex-direction: column;
           gap: 5px;
 
-          li {
+          li, button {
             font-size: 0.9em;
             padding: 8px 10px;
           }
@@ -569,4 +647,7 @@
     }
   }
 </style>
+
+
+
 
