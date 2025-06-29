@@ -1,4 +1,5 @@
 <script>
+  import ProjectsBar from '$lib/components/ProjectsBar.svelte';
   import Sidebar from '$lib/components/Sidebar.svelte';
   import { sessionStore, themeStore } from '$lib/store';
   import { onMount } from 'svelte';
@@ -32,6 +33,7 @@
 
 <main class:sidebar-closed={!sidebarOpen} class={theme}>
   <div class="background-shapes"></div>
+  <ProjectsBar />
   <Sidebar {isGuest} on:toggleSidebar={() => (sidebarOpen = !sidebarOpen)} />
   <slot />
 </main>
